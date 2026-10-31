@@ -40,7 +40,7 @@ struct ClipboardCardView: View {
               let size = ThumbnailImageCache.image(for: item)?.size, size.height > 0 else { return cardWidth }
         let chromeHeight: CGFloat = 76 // padding, header, footer and spacing around the image
         let fitted = (cardHeight - chromeHeight) * size.width / size.height + 2 * DesignTokens.Card.horizontalPadding
-        return min(max(fitted, cardWidth * 0.6), cardWidth)
+        return min(max(fitted, cardWidth * 0.35), cardWidth * 2.5)
     }
 
     var body: some View {

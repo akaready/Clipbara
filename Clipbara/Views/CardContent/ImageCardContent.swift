@@ -4,12 +4,15 @@ import AppKit
 struct ImageCardContent: View {
     let item: ClipboardItem
     @State private var cachedImage: NSImage?
+    @AppStorage(PanelController.fitImageCardsDefaultsKey) private var fitImageCards: Bool = false
 
     var body: some View {
         Group {
             if let image = cachedImage {
                 ZStack {
-                    CheckerboardPattern()
+                    if !fitImageCards {
+                        CheckerboardPattern()
+                    }
                     Image(nsImage: image)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
