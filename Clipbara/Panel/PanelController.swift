@@ -187,7 +187,7 @@ final class PanelController {
         Task { @MainActor [weak self] in
             guard let self, let contentHost = self.contentHost else { return }
             NSAnimationContext.runAnimationGroup({ context in
-                context.duration = 0.32
+                context.duration = 0.22
                 context.timingFunction = Self.slideInCurve
                 // Only the origin moves. Animating the whole frame would also
                 // carry a width captured before any resize that lands mid-slide.
@@ -295,7 +295,7 @@ final class PanelController {
         panel.hasShadow = false
 
         NSAnimationContext.runAnimationGroup({ [contentHost] context in
-            context.duration = 0.2
+            context.duration = 0.14
             context.timingFunction = Self.slideOutCurve
             contentHost?.animator().setFrameOrigin(NSPoint(x: 0, y: -panelHeight))
         }, completionHandler: {
