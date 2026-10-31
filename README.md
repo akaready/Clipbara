@@ -81,7 +81,7 @@ Inside the panel:
 
 - <kbd>Space</kbd> opens and closes Quick Look for the clip under the pointer, or the selected one
 - <kbd>⌘</kbd> <kbd>E</kbd> edits the text of a text clip
-- <kbd>Delete</kbd> removes the selected clip (on a Pinboard tab, from that Pinboard only), and <kbd>⌘</kbd> <kbd>Z</kbd> brings it back
+- <kbd>⌘</kbd> <kbd>Delete</kbd> removes the selected clip (on a Pinboard tab, from that Pinboard only), and <kbd>⌘</kbd> <kbd>Z</kbd> brings it back
 - <kbd>⌘</kbd> <kbd>1</kbd> to <kbd>⌘</kbd> <kbd>9</kbd> switch between History and Pinboards. Hold <kbd>⌘</kbd> to see the numbers
 - <kbd>⌘</kbd> <kbd>,</kbd> opens Settings
 - <kbd>Esc</kbd> clears the search, steps back, or closes the panel

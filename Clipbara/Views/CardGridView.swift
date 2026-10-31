@@ -31,10 +31,10 @@ struct CardGridView: View {
                     ScrollViewReader { proxy in
                         ScrollView(.horizontal, showsIndicators: false) {
                             LazyHGrid(rows: rows, spacing: 14) {
-                                ForEach(filteredItems.indices, id: \.self) { index in
-                                    let item = filteredItems[index]
+                                ForEach(Array(filteredItems.enumerated()), id: \.element.id) { index, item in
                                     cardView(item: item, index: index, cardWidth: cardW, cardHeight: cardH)
                                     .id(item.id)
+                                    .transition(.cardRemoval)
                                 }
                             }
                             .padding(.horizontal, 16)
@@ -56,7 +56,7 @@ struct CardGridView: View {
         }
         .onChange(of: items) { _, newItems in
             if appState.selectedTab == .history {
-                updateFilteredItems(from: newItems)
+                withAnimation(.cardReflow) { updateFilteredItems(from: newItems) }
             }
         }
         .onChange(of: appState.selectedTab) { _, newTab in
@@ -140,6 +140,21 @@ struct CardGridView: View {
 
         appState.searchState.select(min(deletedIndex, remainingCount - 1))
     }
+}
+
+extension AnyTransition {
+    /// Cards shrink and fade out on delete and back in on undo.
+    static var cardRemoval: AnyTransition {
+        .asymmetric(
+            insertion: .scale(scale: 0.85).combined(with: .opacity).animation(.easeOut(duration: 0.2)),
+            removal: .scale(scale: 0.85).combined(with: .opacity).animation(.easeOut(duration: 0.2))
+        )
+    }
+}
+
+extension Animation {
+    /// The remaining cards slide to close (or reopen) the gap, without bounce.
+    static var cardReflow: Animation { .spring(duration: 0.3, bounce: 0) }
 }
 
 struct PanelEmptyState: View {

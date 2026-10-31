@@ -47,6 +47,7 @@ struct PinboardGridView: View {
                                             cardHeight: cardH
                                         )
                                         .id(entry.id)
+                                        .transition(.cardRemoval)
                                     }
                                 }
                             }
@@ -144,7 +145,7 @@ struct PinboardGridView: View {
             .filter { !$0.isDeleted && $0.clipboardItem != nil }
             .sorted { $0.displayOrder < $1.displayOrder }
         if orderedEntries.map(\.id) != current.map(\.id) {
-            orderedEntries = current
+            withAnimation(.cardReflow) { orderedEntries = current }
         }
         syncNavigationItems(current.compactMap(\.clipboardItem))
         appState.panelController.resizeToContentItemCount(current.count)
@@ -169,7 +170,7 @@ struct PinboardGridView: View {
     /// selection on the card that slides into its place.
     private func takeOut(_ entry: PinboardEntry, _ change: () -> Void) {
         let removedIndex = orderedEntries.firstIndex { $0.id == entry.id } ?? appState.searchState.selectedIndex ?? 0
-        orderedEntries.removeAll { $0.id == entry.id }
+        withAnimation(.cardReflow) { orderedEntries.removeAll { $0.id == entry.id } }
         change()
         syncNavigationItems(orderedEntries.compactMap(\.clipboardItem))
         if !orderedEntries.isEmpty {
