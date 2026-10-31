@@ -170,9 +170,30 @@ struct PasteService {
         pasteboard.writeObjects(Self.pasteboardItems(for: items))
     }
 
-    func pasteMany(items: [ClipboardItem]) {
+    func pasteMany(items: [ClipboardItem], asPlainText: Bool = false) {
         ReviewPrompter.recordPaste()
-        writeMany(items: items)
+        guard asPlainText else {
+            writeMany(items: items)
+            return
+        }
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(Self.plainText(for: items), forType: .string)
+    }
+
+    /// Text of each clip, one per line: a file clip contributes its path, an image nothing.
+    static func plainText(for items: [ClipboardItem]) -> String {
+        items.compactMap { clip -> String? in
+            switch clip.contentType {
+            case .image:
+                return nil
+            case .fileURL:
+                return URL(string: String(decoding: clip.rawData, as: UTF8.self))?.path
+            default:
+                return clip.textContent
+            }
+        }
+        .joined(separator: "\n")
     }
 
     private static func carriesText(_ item: ClipboardItem) -> Bool {

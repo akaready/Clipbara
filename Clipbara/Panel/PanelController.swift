@@ -576,6 +576,12 @@ final class PanelController {
                     return true
                 }
 
+                // ⌘⇧V pastes the selection as plain text, also from the search field.
+                if keyCode == 9,
+                   event.modifierFlags.intersection([.command, .option, .control, .shift]) == [.command, .shift] {
+                    return self.pastePlainSelection()
+                }
+
                 if self.quickLookPanel != nil {
                     if isCommandOnly, keyCode == 14, let item = self.quickLookItem, AppState.canEdit(item) { // ⌘E
                         self.appState?.editingClipID = item.id
@@ -880,6 +886,24 @@ final class PanelController {
         default:
             return false
         }
+    }
+
+    /// ⌘⇧V: the Return paste, forced to plain text.
+    private func pastePlainSelection() -> Bool {
+        guard let appState, isVisible else { return false }
+        if let item = quickLookItem {
+            appState.paste(item, asPlainText: true)
+            return true
+        }
+        let multi = appState.selectedClips
+        if !multi.isEmpty {
+            appState.paste(multi, asPlainText: true)
+            return true
+        }
+        let items = appState.currentFilteredItems
+        guard let idx = appState.searchState.selectedIndex, idx < items.count else { return false }
+        appState.paste(items[idx], asPlainText: true)
+        return true
     }
 
     // MARK: - Clipboard Quick Look

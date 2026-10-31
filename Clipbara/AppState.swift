@@ -189,11 +189,11 @@ final class AppState {
         }
     }
 
-    /// Return and click-free paste for a multi-selection.
-    func paste(_ items: [ClipboardItem]) {
+    /// Return and click-free paste for a multi-selection. `asPlainText` is ⌘⇧V.
+    func paste(_ items: [ClipboardItem], asPlainText: Bool = false) {
         clipQueue.stop()
         clipboardMonitor.skipNextChange()
-        pasteService.pasteMany(items: items)
+        pasteService.pasteMany(items: items, asPlainText: asPlainText)
         if DirectPaste.isReady {
             hidePanel(then: { _ = DirectPaste.sendPasteShortcut() })
         } else {
