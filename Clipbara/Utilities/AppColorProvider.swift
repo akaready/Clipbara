@@ -7,8 +7,8 @@ enum AppColorProvider {
     /// Raw (unadjusted) representative colour per bundle id.
     private static var cache: [String: NSColor] = [:]
     private static let sampleSize = 16
-    /// White text needs a background no lighter than this luminance for 4.5:1.
-    private static let maxLuminance = 1.05 / 4.5 - 0.05
+    /// White text needs a background no lighter than this luminance for 3:1 (large bold text).
+    private static let maxLuminance = 1.05 / 3.0 - 0.05
 
     static func headerColor(for bundleId: String?, colorScheme: ColorScheme) -> Color {
         guard let bundleId else { return Color(white: colorScheme == .dark ? 0.3 : 0.38) }
@@ -60,7 +60,7 @@ enum AppColorProvider {
         return NSColor(srgbRed: r / weight, green: g / weight, blue: b / weight, alpha: 1)
     }
 
-    /// Darkens (and, in dark mode, mutes) until white text reaches 4.5:1.
+    /// Darkens (and, in dark mode, mutes) until white text reaches 3:1.
     private static func readable(_ color: NSColor, muted: Bool) -> NSColor {
         var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0
         (color.usingColorSpace(.sRGB) ?? color).getHue(&h, saturation: &s, brightness: &b, alpha: nil)
