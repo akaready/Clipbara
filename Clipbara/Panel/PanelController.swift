@@ -189,6 +189,7 @@ final class PanelController {
         guard !isVisible else { return }
         anchorKeyboard()
         self.appState = appState
+        appState.preparePanelOpen()
 
         let screen = activeScreen
         let screenFrame = screen.visibleFrame
@@ -242,7 +243,6 @@ final class PanelController {
         }
 
         isVisible = true
-        appState.markPanelPresented()
         installClickMonitor()
         installMouseMonitor()
         installScrollMonitor()

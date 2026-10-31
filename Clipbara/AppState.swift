@@ -28,6 +28,13 @@ final class AppState {
     var previewItem: ClipboardItem?
     var panelToast: PanelToast?
     var panelPresentationID = 0
+    /// Settings > General > Reset to First Item After, in seconds. 0 always resets.
+    nonisolated static let resumeWindowDefaultsKey = "resumeWindowSeconds"
+    nonisolated static let defaultResumeWindow = 5
+    @ObservationIgnored private var lastHiddenAt: Date?
+    /// The selected clip when the panel last hid, so a quick reopen keeps it
+    /// even if new clips shifted the indexes meanwhile.
+    @ObservationIgnored private var resumeItemID: UUID?
     var draggedClipboardItemID: UUID?
     /// Set while a card is dragged out of a pinboard, so dropping it on
     /// another pinboard's tab moves it there instead of copying it.
@@ -75,7 +82,7 @@ final class AppState {
         Entitlements.shared.start()
         #endif
         panelController.onPanelWillHide = { [weak self] in
-            self?.searchState.reset()
+            self?.noteHidden()
             self?.previewItem = nil
             ReviewPrompter.panelWillHide { [weak self] in
                 self?.panelController.isVisible ?? false
@@ -116,6 +123,29 @@ final class AppState {
 
     func markPanelPresented() {
         panelPresentationID += 1
+    }
+
+    private func noteHidden() {
+        lastHiddenAt = Date()
+        resumeItemID = searchState.selectedIndex.flatMap {
+            currentFilteredItems.indices.contains($0) ? currentFilteredItems[$0].id : nil
+        }
+    }
+
+    /// Called before the panel shows: either resets to the first item in the
+    /// History tab, or keeps tab, search and selection (and the scroll view,
+    /// whose identity only changes in `markPanelPresented`).
+    func preparePanelOpen() {
+        let stored = UserDefaults.standard.object(forKey: Self.resumeWindowDefaultsKey) as? Int
+        let window = TimeInterval(stored ?? Self.defaultResumeWindow)
+        if PanelResumePolicy.shouldReset(hiddenAt: lastHiddenAt, now: Date(), window: window) {
+            searchState.reset()
+            selectedTab = .history
+            markPanelPresented()
+        } else {
+            searchState.select(resumeItemID.flatMap { id in currentFilteredItems.firstIndex { $0.id == id } }
+                ?? (currentFilteredItems.isEmpty ? nil : 0))
+        }
     }
 
     func selectForPreview(_ item: ClipboardItem?) {
@@ -275,8 +305,6 @@ final class AppState {
         panelToast = nil
         toastTask?.cancel()
         draggedClipboardItemID = nil
-        searchState.reset()
-        selectedTab = .history
         panelController.hidePanel(then: completion)
     }
 

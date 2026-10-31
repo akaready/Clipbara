@@ -8,6 +8,7 @@ struct GeneralSettingsTab: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(AppState.self) private var appState
     @AppStorage("historyLimit") private var historyLimit: Int = 500
+    @AppStorage(AppState.resumeWindowDefaultsKey) private var resumeWindow: Int = AppState.defaultResumeWindow
     @AppStorage(PasteService.alwaysPlainTextDefaultsKey) private var alwaysPastePlainText: Bool = false
     @AppStorage(DirectPaste.enabledDefaultsKey) private var pasteIntoActiveApp: Bool = false
     @State private var hasPastePermission = DirectPaste.hasPermission
@@ -27,6 +28,17 @@ struct GeneralSettingsTab: View {
                 Text("1,000").tag(1000)
                 Text("5,000").tag(5000)
                 Text("Unlimited").tag(0)
+            }
+            .pickerStyle(.menu)
+
+            Picker("Reset to First Item After", selection: $resumeWindow) {
+                Text("Always").tag(0)
+                Text("5 seconds").tag(5)
+                Text("10 seconds").tag(10)
+                Text("15 seconds").tag(15)
+                Text("30 seconds").tag(30)
+                Text("1 minute").tag(60)
+                Text("2 minutes").tag(120)
             }
             .pickerStyle(.menu)
 
