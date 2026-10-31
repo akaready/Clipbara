@@ -47,10 +47,59 @@ final class PanelController {
         return setting && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
     }
 
-    /// Slide-in: quick start, long soft settle. Slide-out: a gentle ease-in that
-    /// leaves without snapping.
-    private static let slideInCurve = CAMediaTimingFunction(controlPoints: 0.16, 1, 0.3, 1)
-    private static let slideOutCurve = CAMediaTimingFunction(controlPoints: 0.4, 0, 0.9, 0.6)
+    /// Slide-in: smooth ease-out that settles without overshoot. Slide-out: a
+    /// soft ease-in that leaves without snapping.
+    private static let slideInCurve = CAMediaTimingFunction(controlPoints: 0.2, 0.9, 0.25, 1)
+    private static let slideOutCurve = CAMediaTimingFunction(controlPoints: 0.4, 0, 0.7, 0.4)
+    private static let slideInDuration: CFTimeInterval = 0.32
+    private static let slideOutDuration: CFTimeInterval = 0.2
+
+    /// Bumped on every slide so a replaced animation's completion is ignored.
+    private var slideGeneration = 0
+
+    /// Slides the content layer to `y` with Core Animation. The layer is
+    /// composited on the GPU, so the SwiftUI tree and the glass blur are not
+    /// laid out or redrawn per frame (animating the view frame did). The model
+    /// value jumps to `y` immediately; the animation starts from wherever the
+    /// layer is on screen, so a slide interrupted midway never jumps.
+    private func slideContent(
+        to y: CGFloat, duration: CFTimeInterval, curve: CAMediaTimingFunction,
+        completion: @escaping @MainActor () -> Void
+    ) {
+        guard let layer = contentHost?.layer else { completion(); return }
+        slideGeneration += 1
+        let generation = slideGeneration
+        let from = (layer.presentation()?.value(forKeyPath: "transform.translation.y") as? CGFloat)
+            ?? (layer.value(forKeyPath: "transform.translation.y") as? CGFloat) ?? 0
+
+        CATransaction.begin()
+        CATransaction.setCompletionBlock { [weak self] in
+            Task { @MainActor in
+                guard self?.slideGeneration == generation else { return }
+                completion()
+            }
+        }
+        CATransaction.setDisableActions(true)
+        layer.transform = CATransform3DMakeTranslation(0, y, 0)
+        let animation = CABasicAnimation(keyPath: "transform.translation.y")
+        animation.fromValue = from
+        animation.toValue = y
+        animation.duration = duration
+        animation.timingFunction = curve
+        layer.add(animation, forKey: "slide")
+        CATransaction.commit()
+    }
+
+    /// Parks the content layer at `y` with no animation.
+    private func parkContent(at y: CGFloat) {
+        slideGeneration += 1
+        guard let layer = contentHost?.layer else { return }
+        layer.removeAnimation(forKey: "slide")
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        layer.transform = CATransform3DMakeTranslation(0, y, 0)
+        CATransaction.commit()
+    }
 
     /// Settings > Appearance > Panel Width / Card Size. Read each time the
     /// panel opens or resizes. Missing means fit content at 1x.
@@ -165,7 +214,7 @@ final class PanelController {
         // it onto a display stacked underneath, which is how the panel used to
         // end up on the wrong screen.
         let animates = Self.animatesPanel
-        contentHost?.frame.origin.y = animates ? -endFrame.height : 0
+        parkContent(at: animates ? -endFrame.height : 0)
         panel?.alphaValue = 1
 
         // The window shadow is derived from the content alpha. While the
@@ -202,19 +251,10 @@ final class PanelController {
 
     private func slideContentIn() {
         Task { @MainActor [weak self] in
-            guard let self, let contentHost = self.contentHost else { return }
-            NSAnimationContext.runAnimationGroup({ context in
-                context.duration = 0.22
-                context.timingFunction = Self.slideInCurve
-                // Only the origin moves. Animating the whole frame would also
-                // carry a width captured before any resize that lands mid-slide.
-                contentHost.animator().setFrameOrigin(.zero)
-            }, completionHandler: {
-                Task { @MainActor [weak self] in
-                    self?.panel?.hasShadow = true
-                    self?.panel?.invalidateShadow()
-                }
-            })
+            self?.slideContent(to: 0, duration: Self.slideInDuration, curve: Self.slideInCurve) {
+                self?.panel?.hasShadow = true
+                self?.panel?.invalidateShadow()
+            }
         }
     }
 
@@ -298,7 +338,7 @@ final class PanelController {
         let finish: @MainActor () -> Void = { [weak self] in
             panel.orderOut(nil)
             panel.hasShadow = true
-            self?.contentHost?.frame.origin.y = 0
+            self?.parkContent(at: 0)
             self?.presentedScreen = nil
             self?.isVisible = false
             completion?()
@@ -311,15 +351,7 @@ final class PanelController {
 
         panel.hasShadow = false
 
-        NSAnimationContext.runAnimationGroup({ [contentHost] context in
-            context.duration = 0.14
-            context.timingFunction = Self.slideOutCurve
-            contentHost?.animator().setFrameOrigin(NSPoint(x: 0, y: -panelHeight))
-        }, completionHandler: {
-            Task { @MainActor in
-                finish()
-            }
-        })
+        slideContent(to: -panelHeight, duration: Self.slideOutDuration, curve: Self.slideOutCurve, completion: finish)
     }
 
     // MARK: - Click Monitor (dismiss on outside click)
