@@ -7,8 +7,9 @@ enum AppColorProvider {
     /// Raw (unadjusted) representative colour per bundle id.
     private static var cache: [String: NSColor] = [:]
     private static let sampleSize = 16
-    /// White text needs a background no lighter than this luminance for 3:1 (large bold text).
-    private static let maxLuminance = 1.05 / 3.0 - 0.05
+    /// Paste's headers are vivid with white text (yellow Notes included), so only the
+    /// lightest colours get darkened. That is looser than a strict 3:1 contrast.
+    private static let maxLuminance = 0.5
 
     static func headerColor(for bundleId: String?, colorScheme: ColorScheme) -> Color {
         guard let bundleId else { return Color(white: colorScheme == .dark ? 0.3 : 0.38) }
@@ -22,8 +23,9 @@ enum AppColorProvider {
         return Color(nsColor: readable(base, muted: colorScheme == .dark))
     }
 
-    /// Saturation-weighted average of the icon's opaque pixels, so white or
-    /// black icon backgrounds don't wash the hue out. Grey if there is none.
+    /// Average of the icon's dominant hue (saturation-weighted, so white or black
+    /// icon backgrounds don't wash it out), not of all hues, which turns a
+    /// multicolour icon to mud. Grey if there is none.
     private static func representativeColor(of image: NSImage) -> NSColor {
         let size = sampleSize
         let grey = NSColor(white: 0.38, alpha: 1)
@@ -43,7 +45,8 @@ enum AppColorProvider {
         }
         guard drawn else { return grey }
 
-        var r = 0.0, g = 0.0, b = 0.0, weight = 0.0
+        let buckets = 12
+        var sums = [[Double]](repeating: [0, 0, 0, 0], count: buckets)
         for i in 0..<(size * size) {
             let a = Double(pixels[i * 4 + 3]) / 255
             guard a > 0.5 else { continue }
@@ -54,16 +57,20 @@ enum AppColorProvider {
             let saturation = top > 0 ? (top - min(pr, pg, pb)) / top : 0
             guard saturation > 0.25, top > 0.2 else { continue }
             let w = saturation * saturation
-            r += pr * w; g += pg * w; b += pb * w; weight += w
+            let hue = NSColor(srgbRed: pr, green: pg, blue: pb, alpha: 1).hueComponent
+            let k = min(Int(hue * Double(buckets)), buckets - 1)
+            sums[k][0] += pr * w; sums[k][1] += pg * w; sums[k][2] += pb * w; sums[k][3] += w
         }
-        guard weight > 0 else { return grey }
-        return NSColor(srgbRed: r / weight, green: g / weight, blue: b / weight, alpha: 1)
+        guard let best = sums.max(by: { $0[3] < $1[3] }), best[3] > 0 else { return grey }
+        return NSColor(srgbRed: best[0] / best[3], green: best[1] / best[3], blue: best[2] / best[3], alpha: 1)
     }
 
     /// Darkens (and, in dark mode, mutes) until white text reaches 3:1.
     private static func readable(_ color: NSColor, muted: Bool) -> NSColor {
         var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0
         (color.usingColorSpace(.sRGB) ?? color).getHue(&h, saturation: &s, brightness: &b, alpha: nil)
+        s = max(s, 0.75)
+        b = max(b, 0.9)
         if muted { s *= 0.85; b *= 0.85 }
         var result = NSColor(hue: h, saturation: s, brightness: b, alpha: 1)
         while luminance(result) > maxLuminance, b > 0.05 {

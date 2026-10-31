@@ -175,9 +175,13 @@ struct ClipboardCardView: View {
         .frame(width: width, height: cardHeight)
         .background(cardFillColor)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        .overlay(alignment: .bottomTrailing) {
+            if isColorful, !colorfulHasFooter, hasMenu { menuButton.padding(4) }
+        }
         .overlay(
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .strokeBorder(
+                    isSelected && isColorful ? Color.clear :
                     isSelected
                         ? DesignTokens.Selection.borderColor
                         : (isHovered
@@ -188,13 +192,22 @@ struct ClipboardCardView: View {
                         : (isHovered ? DesignTokens.Selection.hoverBorderWidth : DesignTokens.Selection.defaultBorderWidth)
                 )
         )
+        .overlay {
+            if isColorful && isSelected {
+                let w = DesignTokens.Colorful.selectionWidth
+                RoundedRectangle(cornerRadius: cornerRadius + w, style: .continuous)
+                    .strokeBorder(DesignTokens.Selection.borderColor, lineWidth: w)
+                    .padding(-w)
+                    .allowsHitTesting(false)
+            }
+        }
         .shadow(
             color: cardShadowColor,
-            radius: isSelected ? DesignTokens.Selection.selectedShadowRadius
+            radius: isColorful ? 5 : isSelected ? DesignTokens.Selection.selectedShadowRadius
                 : (isHovered ? DesignTokens.Selection.hoverShadowRadius : DesignTokens.Selection.defaultShadowRadius),
             y: isSelected ? 6 : (isHovered ? 5 : 2)
         )
-        .scaleEffect(isSelected ? 1.01 : (isHovered ? DesignTokens.Selection.hoverScale : 1.0))
+        .scaleEffect(isSelected && !isColorful ? 1.01 : (isHovered ? DesignTokens.Selection.hoverScale : 1.0))
         .offset(y: isHovered && !isSelected ? DesignTokens.Selection.hoverLift : 0)
         .brightness(isHovered && !isSelected ? 0.04 : 0)
         .zIndex(isHovered ? 1 : 0)
@@ -322,7 +335,7 @@ struct ClipboardCardView: View {
     // MARK: - Colorful Style
 
     private var colorfulHeader: some View {
-        let title = item.userTitle ?? (item.contentType == .image ? nil : item.contentType.displayName)
+        let title = item.userTitle ?? item.contentType.displayName
         let iconSize = DesignTokens.Colorful.headerHeight * DesignTokens.Colorful.iconScale
         let crop = iconSize * DesignTokens.Colorful.iconOffset
 
@@ -337,12 +350,10 @@ struct ClipboardCardView: View {
             }
 
             VStack(alignment: .leading, spacing: 1) {
-                if let title {
-                    Text(title)
-                        .font(DesignTokens.Colorful.titleFont)
-                        .lineLimit(1)
-                }
-                Text(RelativeTimeFormatter.string(for: item.copiedAt))
+                Text(title)
+                    .font(DesignTokens.Colorful.titleFont)
+                    .lineLimit(1)
+                Text(RelativeTimeFormatter.string(for: item.copiedAt, full: true))
                     .font(DesignTokens.Colorful.timeFont)
                     .opacity(0.8)
                     .lineLimit(1)
@@ -357,24 +368,40 @@ struct ClipboardCardView: View {
 
     @ViewBuilder
     private var colorfulContentView: some View {
-        if item.contentType == .image || item.contentType == .color {
+        if item.contentType == .image || item.contentType == .color || item.contentType == .url {
             cardContent
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .clipped()
         } else {
             cardContent
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .padding(.horizontal, DesignTokens.Card.horizontalPadding)
-                .padding(.top, 8)
+                .padding(.horizontal, DesignTokens.Colorful.contentInset)
+                .padding(.top, 10)
+                .mask(
+                    LinearGradient(stops: [.init(color: .black, location: 0.82), .init(color: .clear, location: 1)],
+                                   startPoint: .top, endPoint: .bottom)
+                )
                 .clipped()
         }
     }
 
+    /// Image and link cards are full-bleed with no footer line, like Paste.
+    private var colorfulHasFooter: Bool {
+        item.contentType != .image && item.contentType != .url
+    }
+
+    @ViewBuilder
     private var colorfulFooter: some View {
+        if colorfulHasFooter {
+            colorfulFooterRow
+        }
+    }
+
+    private var colorfulFooterRow: some View {
         ZStack {
             Text(footerInfo)
                 .font(DesignTokens.Colorful.footerFont)
-                .foregroundStyle(DesignTokens.Badge.textColor(for: colorScheme))
+                .foregroundStyle(DesignTokens.Colorful.footerTextColor(for: colorScheme))
                 .lineLimit(1)
                 .padding(.horizontal, 28)
 
@@ -393,6 +420,7 @@ struct ClipboardCardView: View {
         switch item.contentType {
         case .plainText, .richText, .html, .unknown:
             let count = item.textContent?.count ?? 0
+            if isColorful { return String(localized: "\(count) characters") }
             if count >= 1000 {
                 let thousands = String(format: "%.1f", Double(count) / 1000)
                 return String(localized: "\(thousands)K chars")
@@ -406,13 +434,14 @@ struct ClipboardCardView: View {
             let kb = item.rawData.count / 1024
             return "\(kb) KB"
         case .color:
-            return item.textContent ?? ""
+            return isColorful ? "" : (item.textContent ?? "")
         }
     }
 
     // MARK: - Card Background
 
     private var cardFillColor: Color {
+        if isColorful { return DesignTokens.Colorful.backgroundColor(for: colorScheme) }
         if isSelected {
             return colorScheme == .dark
                 ? Color(red: 0.105, green: 0.125, blue: 0.165)
@@ -422,6 +451,7 @@ struct ClipboardCardView: View {
     }
 
     private var cardShadowColor: Color {
+        if isColorful { return .black.opacity(colorScheme == .dark ? 0.5 : (isHovered ? 0.28 : 0.16)) }
         if isSelected {
             return DesignTokens.Selection.borderColor.opacity(DesignTokens.Selection.selectedShadowOpacity)
         }
@@ -456,9 +486,9 @@ struct ClipboardCardView: View {
         case .plainText, .richText, .html:
             TextCardContent(item: item, searchText: searchText, scale: CGFloat(cardScale))
         case .image:
-            ImageCardContent(item: item)
+            ImageCardContent(item: item, showsDimensions: isColorful)
         case .url:
-            LinkCardContent(item: item, searchText: searchText, scale: CGFloat(cardScale))
+            LinkCardContent(item: item, searchText: searchText, scale: CGFloat(cardScale), colorful: isColorful)
         case .fileURL:
             FileCardContent(item: item, searchText: searchText, scale: CGFloat(cardScale))
         case .color:

@@ -55,15 +55,26 @@ enum DesignTokens {
     // MARK: - Colorful Card Style
 
     enum Colorful {
-        static let cornerRadius: CGFloat = 12
-        static let aspect: CGFloat = 1.05 // max width / height
-        static let headerHeight: CGFloat = 46
-        static let footerHeight: CGFloat = 22
-        static let iconScale: CGFloat = 1.6 // app icon size relative to the header
-        static let iconOffset: CGFloat = 0.25 // fraction of the icon cropped by the card's top/right edge
-        static let titleFont: Font = .system(size: 13, weight: .semibold)
-        static let timeFont: Font = .system(size: 10)
+        static let cornerRadius: CGFloat = 16
+        static let aspect: CGFloat = 1.0 // max width / height
+        static let headerHeight: CGFloat = 52
+        static let footerHeight: CGFloat = 24
+        static let iconScale: CGFloat = 1.2 // app icon size relative to the header
+        static let iconOffset: CGFloat = 0.1 // fraction of the icon cropped by the card's top/right edge
+        static let contentInset: CGFloat = 12
+        static let selectionWidth: CGFloat = 3
+        static let titleFont: Font = .system(size: 14, weight: .semibold)
+        static let timeFont: Font = .system(size: 11)
         static let footerFont: Font = .system(size: 10)
+
+        /// Paste's cards stay white in light mode, selected or not.
+        static func backgroundColor(for colorScheme: ColorScheme) -> Color {
+            colorScheme == .dark ? Color(white: 0.14) : .white
+        }
+
+        static func footerTextColor(for colorScheme: ColorScheme) -> Color {
+            colorScheme == .dark ? Color(white: 0.6) : Color(white: 0.5)
+        }
     }
 
     // MARK: - Card Header
