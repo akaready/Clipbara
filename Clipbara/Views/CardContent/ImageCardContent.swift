@@ -16,15 +16,20 @@ struct ImageCardContent: View {
     var body: some View {
         Group {
             if let image = cachedImage {
-                ZStack {
-                    if !fitImageCards {
-                        CheckerboardPattern()
+                // The image is an overlay on a flexible clear base so a filled image
+                // can't grow the card; it only crops to the space it's given.
+                Color.clear
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .overlay {
+                        if !fitImageCards {
+                            CheckerboardPattern()
+                        }
                     }
-                    Image(nsImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: fitImageCards ? .fill : .fit)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .overlay {
+                        Image(nsImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: fitImageCards ? .fill : .fit)
+                    }
                 .overlay(alignment: .bottom) {
                     if showsDimensions, let size = pixelSize(of: image) {
                         Text(size)
