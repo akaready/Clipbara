@@ -30,7 +30,7 @@ struct CardGridView: View {
 
                     ScrollViewReader { proxy in
                         ScrollView(.horizontal, showsIndicators: false) {
-                            LazyHGrid(rows: rows, spacing: 8) {
+                            LazyHGrid(rows: rows, spacing: 14) {
                                 ForEach(filteredItems.indices, id: \.self) { index in
                                     let item = filteredItems[index]
                                     cardView(item: item, index: index, cardWidth: cardW, cardHeight: cardH)

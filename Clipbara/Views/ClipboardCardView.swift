@@ -31,7 +31,6 @@ struct ClipboardCardView: View {
     @State private var renameText = ""
     @State private var multiDragStarted = false
     @AppStorage(PanelController.cardScaleDefaultsKey) private var cardScale: Double = 1
-    @AppStorage(PanelController.fitImageCardsDefaultsKey) private var fitImageCards: Bool = false
     @AppStorage(PanelController.cardStyleDefaultsKey) private var cardStyle: CardStyle = .classic
 
     private var isColorful: Bool { cardStyle == .colorful }
@@ -39,20 +38,9 @@ struct ClipboardCardView: View {
         isColorful ? DesignTokens.Colorful.cornerRadius : DesignTokens.Card.cornerRadius
     }
 
-    /// With "fit image cards", an image card is as wide as its image at the
-    /// card height (never wider than a normal card, never too narrow to click).
+    /// Every card is the same width. Colorful cards are squarer.
     private var width: CGFloat {
-        // Colorful cards are squarer.
-        let baseWidth = isColorful ? min(cardWidth, cardHeight * DesignTokens.Colorful.aspect) : cardWidth
-        guard fitImageCards, item.contentType == .image,
-              let size = ThumbnailImageCache.image(for: item)?.size, size.height > 0 else { return baseWidth }
-        // Header and footer (plus padding and spacing, in Classic) around the image.
-        let chromeHeight: CGFloat = isColorful
-            ? DesignTokens.Colorful.headerHeight + DesignTokens.Colorful.footerHeight
-            : 76
-        let padding: CGFloat = isColorful ? 0 : 2 * DesignTokens.Card.horizontalPadding
-        let fitted = (cardHeight - chromeHeight) * size.width / size.height + padding
-        return min(max(fitted, baseWidth * 0.35), baseWidth * 2.5)
+        isColorful ? min(cardWidth, cardHeight * DesignTokens.Colorful.aspect) : cardWidth
     }
 
     var body: some View {

@@ -15,8 +15,10 @@ struct ImageCardContent: View {
                     }
                     Image(nsImage: image)
                         .resizable()
-                        .aspectRatio(contentMode: .fit)
+                        .aspectRatio(contentMode: fitImageCards ? .fill : .fit)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
             } else {
                 Image(systemName: "photo")
                     .font(.largeTitle)

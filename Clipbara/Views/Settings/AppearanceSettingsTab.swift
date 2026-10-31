@@ -63,7 +63,7 @@ struct AppearanceSettingsTab: View {
             }
             .pickerStyle(.segmented)
 
-            Toggle("Fit image cards to image", isOn: $fitImageCards)
+            Toggle("Fill image cards", isOn: $fitImageCards)
 
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
