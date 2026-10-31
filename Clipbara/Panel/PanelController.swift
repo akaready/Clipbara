@@ -47,6 +47,11 @@ final class PanelController {
         return setting && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
     }
 
+    /// Slide-in: quick start, long soft settle. Slide-out: a gentle ease-in that
+    /// leaves without snapping.
+    private static let slideInCurve = CAMediaTimingFunction(controlPoints: 0.16, 1, 0.3, 1)
+    private static let slideOutCurve = CAMediaTimingFunction(controlPoints: 0.4, 0, 0.9, 0.6)
+
     private let baseHeight: CGFloat = 280
     private let minimumPanelWidth: CGFloat = 720
     private let maximumScreenWidthRatio: CGFloat = 0.90
@@ -182,8 +187,8 @@ final class PanelController {
         Task { @MainActor [weak self] in
             guard let self, let contentHost = self.contentHost else { return }
             NSAnimationContext.runAnimationGroup({ context in
-                context.duration = 0.25
-                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                context.duration = 0.32
+                context.timingFunction = Self.slideInCurve
                 // Only the origin moves. Animating the whole frame would also
                 // carry a width captured before any resize that lands mid-slide.
                 contentHost.animator().setFrameOrigin(.zero)
@@ -291,7 +296,7 @@ final class PanelController {
 
         NSAnimationContext.runAnimationGroup({ [contentHost] context in
             context.duration = 0.2
-            context.timingFunction = CAMediaTimingFunction(name: .easeIn)
+            context.timingFunction = Self.slideOutCurve
             contentHost?.animator().setFrameOrigin(NSPoint(x: 0, y: -panelHeight))
         }, completionHandler: {
             Task { @MainActor in
