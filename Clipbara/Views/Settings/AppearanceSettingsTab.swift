@@ -18,6 +18,8 @@ enum AppTheme: String, CaseIterable {
 struct AppearanceSettingsTab: View {
     @AppStorage("appTheme") private var appTheme: String = AppTheme.system.rawValue
     @AppStorage(PanelController.animatesPanelDefaultsKey) private var animatesPanel: Bool = true
+    @AppStorage(PanelController.fullWidthDefaultsKey) private var fullWidth: Bool = false
+    @AppStorage(PanelController.cardScaleDefaultsKey) private var cardScale: Double = 1
     @State private var reducesMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
 
     var body: some View {
@@ -31,6 +33,20 @@ struct AppearanceSettingsTab: View {
             .onChange(of: appTheme) { _, newValue in
                 applyTheme(newValue)
             }
+
+            Picker("Panel Width", selection: $fullWidth) {
+                Text("Fit content").tag(false)
+                Text("Full width").tag(true)
+            }
+            .pickerStyle(.segmented)
+
+            Picker("Card Size", selection: $cardScale) {
+                Text("Small").tag(0.85)
+                Text("Medium").tag(1.0)
+                Text("Large").tag(1.25)
+                Text("Extra large").tag(1.5)
+            }
+            .pickerStyle(.segmented)
 
             HStack {
                 VStack(alignment: .leading, spacing: 2) {

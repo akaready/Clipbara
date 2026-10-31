@@ -4010,7 +4010,15 @@
           }
         }
       }
-    }
+    },
+    "Panel Width" : {},
+    "Fit content" : {},
+    "Full width" : {},
+    "Card Size" : {},
+    "Small" : {},
+    "Medium" : {},
+    "Large" : {},
+    "Extra large" : {}
   },
   "version" : "1.0"
 }

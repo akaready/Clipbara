@@ -30,6 +30,7 @@ struct ClipboardCardView: View {
     @State private var isRenaming = false
     @State private var renameText = ""
     @State private var multiDragStarted = false
+    @AppStorage(PanelController.cardScaleDefaultsKey) private var cardScale: Double = 1
 
     var body: some View {
         if item.isDeleted || item.modelContext == nil {
@@ -41,6 +42,8 @@ struct ClipboardCardView: View {
 
     private var cardBody: some View {
         cardSurface
+        .scaleEffect(cardScale, anchor: .topLeading)
+        .frame(width: cardWidth * cardScale, height: cardHeight * cardScale, alignment: .topLeading)
         .onHover { hovering in
             isHovered = hovering
             if hovering {

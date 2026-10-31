@@ -3,6 +3,7 @@ import SwiftData
 
 struct CardGridView: View {
     @Environment(AppState.self) private var appState
+    @AppStorage(PanelController.cardScaleDefaultsKey) private var cardScale: Double = 1
     @Query(sort: \ClipboardItem.copiedAt, order: .reverse)
     private var items: [ClipboardItem]
     @Query(sort: \Pinboard.displayOrder)
@@ -22,9 +23,9 @@ struct CardGridView: View {
                 )
             } else {
                 GeometryReader { geo in
-                    let cardH = min(max(geo.size.height - 26, 164), 188)
+                    let cardH = min(max((geo.size.height - 26) / cardScale, 164), 188)
                     let cardW = min(max(cardH * 1.16, 206), 228)
-                    let rows = [GridItem(.fixed(cardH), spacing: 10)]
+                    let rows = [GridItem(.fixed(cardH * cardScale), spacing: 10)]
 
                     ScrollViewReader { proxy in
                         ScrollView(.horizontal, showsIndicators: false) {

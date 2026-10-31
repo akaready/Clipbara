@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 
 struct PinboardGridView: View {
     @Environment(AppState.self) private var appState
+    @AppStorage(PanelController.cardScaleDefaultsKey) private var cardScale: Double = 1
     @Environment(\.modelContext) private var modelContext
 
     let pinboardId: UUID
@@ -27,9 +28,9 @@ struct PinboardGridView: View {
                 )
             } else {
                 GeometryReader { geo in
-                    let cardH = min(max(geo.size.height - 26, 164), 188)
+                    let cardH = min(max((geo.size.height - 26) / cardScale, 164), 188)
                     let cardW = min(max(cardH * 1.16, 206), 228)
-                    let rows = [GridItem(.fixed(cardH), spacing: 10)]
+                    let rows = [GridItem(.fixed(cardH * cardScale), spacing: 10)]
                     let pinboardItems = orderedEntries.compactMap(\.clipboardItem)
 
                     ScrollViewReader { proxy in

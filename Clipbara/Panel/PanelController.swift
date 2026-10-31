@@ -52,7 +52,21 @@ final class PanelController {
     private static let slideInCurve = CAMediaTimingFunction(controlPoints: 0.16, 1, 0.3, 1)
     private static let slideOutCurve = CAMediaTimingFunction(controlPoints: 0.4, 0, 0.9, 0.6)
 
-    private let baseHeight: CGFloat = 280
+    /// Settings > Appearance > Panel Width / Card Size. Read each time the
+    /// panel opens or resizes. Missing means fit content at 1x.
+    nonisolated static let fullWidthDefaultsKey = "panelFullWidth"
+    nonisolated static let cardScaleDefaultsKey = "cardScale"
+
+    private var fullWidth: Bool { UserDefaults.standard.bool(forKey: Self.fullWidthDefaultsKey) }
+
+    /// One factor scales the cards (and so the panel height to fit them).
+    private var cardScale: CGFloat {
+        let value = UserDefaults.standard.object(forKey: Self.cardScaleDefaultsKey) as? Double ?? 1
+        return CGFloat(min(max(value, 0.5), 2))
+    }
+
+    /// The 280pt panel at 1x; the card area (188pt card + 26pt margins) grows with the scale.
+    private var baseHeight: CGFloat { 280 + 214 * (cardScale - 1) }
     private let minimumPanelWidth: CGFloat = 720
     private let maximumScreenWidthRatio: CGFloat = 0.90
     private let estimatedCardWidth: CGFloat = 228
@@ -981,7 +995,9 @@ final class PanelController {
     }
 
     private func panelFrame(in screenFrame: NSRect, itemCount: Int, y: CGFloat) -> NSRect {
-        let panelWidth = targetPanelWidth(for: itemCount, screenWidth: screenFrame.width)
+        let panelWidth = fullWidth
+            ? screenFrame.width
+            : targetPanelWidth(for: itemCount, screenWidth: screenFrame.width)
         let panelX = screenFrame.midX - panelWidth / 2
 
         return NSRect(
