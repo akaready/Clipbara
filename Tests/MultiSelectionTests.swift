@@ -1,3 +1,4 @@
+import AppKit
 import XCTest
 
 @MainActor
@@ -78,5 +79,12 @@ final class MultiSelectionTests: XCTestCase {
         state.ensureSelection(itemCount: 2)
         XCTAssertFalse(state.hasMultiSelection)
         XCTAssertEqual(state.selectedIndex, 1)
+    }
+
+    func testOnlyShiftAloneExtendsTheRange() {
+        XCTAssertTrue(PanelController.isRangeExtend([.shift]))
+        XCTAssertFalse(PanelController.isRangeExtend([]))
+        XCTAssertFalse(PanelController.isRangeExtend([.command, .control, .option, .shift])) // Hyper held
+        XCTAssertFalse(PanelController.isRangeExtend([.command, .shift]))
     }
 }
