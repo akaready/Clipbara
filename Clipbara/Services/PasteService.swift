@@ -161,6 +161,65 @@ struct PasteService {
         }
     }
 
+    // MARK: - Several clips at once
+
+    /// Writes the clips as one pasteboard change; see `pasteboardItems(for:forDrag:)`.
+    func writeMany(items: [ClipboardItem]) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.writeObjects(Self.pasteboardItems(for: items))
+    }
+
+    func pasteMany(items: [ClipboardItem]) {
+        ReviewPrompter.recordPaste()
+        writeMany(items: items)
+    }
+
+    private static func carriesText(_ item: ClipboardItem) -> Bool {
+        item.contentType != .image && item.contentType != .fileURL
+    }
+
+    /// All text becomes one string joined with newlines. Otherwise each clip is
+    /// its own pasteboard item (files as file URLs, images as images) and the
+    /// first one also carries the joined text. A drag also gets images as temp
+    /// files, which is what Finder takes.
+    static func pasteboardItems(for items: [ClipboardItem], forDrag: Bool = false) -> [NSPasteboardItem] {
+        let joined = items.filter(carriesText).compactMap(\.textContent).joined(separator: "\n")
+        if items.allSatisfy(carriesText) {
+            let item = NSPasteboardItem()
+            item.setString(joined, forType: .string)
+            return [item]
+        }
+
+        let result = items.map { clip -> NSPasteboardItem in
+            let item = NSPasteboardItem()
+            switch clip.contentType {
+            case .fileURL:
+                if let urlString = String(data: clip.rawData, encoding: .utf8) {
+                    item.setString(urlString, forType: .fileURL)
+                }
+            case .image:
+                if let tiff = NSImage(data: clip.rawData)?.tiffRepresentation,
+                   let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) {
+                    if forDrag, let url = writeTempPNG(png, sourceApp: clip.sourceAppName) {
+                        item.setString(url.absoluteString, forType: .fileURL)
+                    }
+                    item.setData(png, forType: .png)
+                    item.setData(tiff, forType: .tiff)
+                } else {
+                    item.setData(clip.rawData, forType: .tiff)
+                }
+            default:
+                if let text = clip.textContent { item.setString(text, forType: .string) }
+                if clip.contentType == .richText { item.setData(clip.rawData, forType: .rtf) }
+                if clip.contentType == .html { item.setData(clip.rawData, forType: .html) }
+            }
+            return item
+        }
+        if !joined.isEmpty { result.first?.setString(joined, forType: .string) }
+        return result
+    }
+
     func pastePlainText(item: ClipboardItem) {
         guard let text = item.textContent else { return }
         let pasteboard = NSPasteboard.general

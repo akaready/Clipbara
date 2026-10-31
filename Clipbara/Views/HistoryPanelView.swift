@@ -57,7 +57,7 @@ struct HistoryPanelView: View {
                             item: previewItem,
                             onClose: {
                                 withAnimation(.easeOut(duration: 0.2)) {
-                                    appState.searchState.selectedIndex = nil
+                                    appState.searchState.select(nil)
                                     appState.selectForPreview(nil)
                                 }
                             },

@@ -38,6 +38,8 @@ final class ClipUndoStack {
         /// was already there.
         case move(EntrySnapshot, added: UUID?, destinationID: UUID)
         case edit(clipID: UUID, text: String?, rawData: Data, contentHash: String)
+        /// Several deletions undone together.
+        case batch([Record])
     }
 
     private static let limit = 20
@@ -47,28 +49,48 @@ final class ClipUndoStack {
 
     /// Deletes the clip from history together with its pinboard entries.
     func deleteClip(_ item: ClipboardItem, in context: ModelContext) {
+        push(removeClip(item, in: context))
+    }
+
+    /// Deletes several clips; one ⌘Z brings them all back.
+    func deleteClips(_ items: [ClipboardItem], in context: ModelContext) {
+        push(.batch(items.map { removeClip($0, in: context) }))
+    }
+
+    private func removeClip(_ item: ClipboardItem, in context: ModelContext) -> Record {
         let itemID = item.id
         let descriptor = FetchDescriptor<PinboardEntry>(
             predicate: #Predicate { $0.clipboardItem?.id == itemID }
         )
         let entries = (try? context.fetch(descriptor)) ?? []
         let entrySnapshots = entries.compactMap(Self.snapshot(of:))
-        push(.clip(Self.snapshot(of: item), entries: entrySnapshots))
+        let record = Record.clip(Self.snapshot(of: item), entries: entrySnapshots)
 
         let pinboards = Set(entries.compactMap { $0.pinboard?.id })
         entries.forEach(context.delete)
         context.delete(item)
         try? context.save()
         pinboards.forEach { renumber(pinboardID: $0, in: context) }
+        return record
     }
 
     /// Removes the clip from one pinboard only; the clip stays in history.
     func removeEntry(_ entry: PinboardEntry, in context: ModelContext) {
-        guard let snapshot = Self.snapshot(of: entry) else { return }
-        push(.entry(snapshot))
+        if let record = detach(entry, in: context) { push(record) }
+    }
+
+    /// Removes several entries; one ⌘Z puts them all back.
+    func removeEntries(_ entries: [PinboardEntry], in context: ModelContext) {
+        let records = entries.compactMap { detach($0, in: context) }
+        if !records.isEmpty { push(.batch(records)) }
+    }
+
+    private func detach(_ entry: PinboardEntry, in context: ModelContext) -> Record? {
+        guard let snapshot = Self.snapshot(of: entry) else { return nil }
         context.delete(entry)
         try? context.save()
         renumber(pinboardID: snapshot.pinboardID, in: context)
+        return .entry(snapshot)
     }
 
     /// Moves a clip from its pinboard to another one. When the destination
@@ -106,7 +128,15 @@ final class ClipUndoStack {
     @discardableResult
     func undo(in context: ModelContext) -> Bool {
         guard let record = records.popLast() else { return false }
+        return restore(record, in: context)
+    }
+
+    private func restore(_ record: Record, in context: ModelContext) -> Bool {
         switch record {
+        case .batch(let records):
+            // Newest first, so entries return to the positions they left.
+            return records.reversed().reduce(true) { restore($1, in: context) && $0 }
+
         case .clip(let clip, let entries):
             let item = ClipboardItem(
                 contentType: ContentType(rawValue: clip.contentTypeRaw) ?? .unknown,

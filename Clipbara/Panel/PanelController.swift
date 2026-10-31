@@ -456,7 +456,7 @@ final class PanelController {
         anchorKeyboard()
         if quickLookPanel != nil { hideQuickLook() }
         appState.selectForPreview(nil)
-        appState.searchState.selectedIndex = nil
+        appState.searchState.select(nil)
         appState.currentFilteredItems = []
         appState.selectedTab = tab
     }
@@ -575,6 +575,15 @@ final class PanelController {
                 if modifiers == .command, keyCode == 14 { // ⌘E
                     return self.editTargetClip()
                 }
+                if modifiers == .command, keyCode == 0 { // ⌘A
+                    self.appState?.searchState.selectAll(count: self.appState?.currentFilteredItems.count ?? 0)
+                    return true
+                }
+                if modifiers == .command, keyCode == 8 { // ⌘C
+                    guard let appState = self.appState, !appState.selectedClips.isEmpty else { return false }
+                    appState.copy(appState.selectedClips)
+                    return true
+                }
 
                 if keyCode == 48, !modifiers.contains(.command), !modifiers.contains(.option),
                    !modifiers.contains(.control), self.focusSearchField() {
@@ -627,7 +636,7 @@ final class PanelController {
         guard let panel, let appState else { return }
         panel.makeFirstResponder(nil)
         if appState.searchState.selectedIndex == nil, !appState.currentFilteredItems.isEmpty {
-            appState.searchState.selectedIndex = 0
+            appState.searchState.select(0)
         }
     }
 
@@ -658,7 +667,7 @@ final class PanelController {
     func beginEditing(_ item: ClipboardItem) {
         guard let appState, AppState.canEdit(item) else { return }
         if let idx = appState.currentFilteredItems.firstIndex(where: { $0.id == item.id }) {
-            appState.searchState.selectedIndex = idx
+            appState.searchState.select(idx)
         }
         showQuickLook(item: item)
         appState.editingClipID = item.id
@@ -686,19 +695,25 @@ final class PanelController {
         guard let appState, appState.previewItem == nil,
               let idx = appState.searchState.selectedIndex,
               idx < appState.currentFilteredItems.count else { return false }
-        let item = appState.currentFilteredItems[idx]
+        let multi = appState.selectedClips
+        let targets = multi.isEmpty ? [appState.currentFilteredItems[idx]] : multi
+        let firstIndex = appState.searchState.selectedIndices.min() ?? idx
         switch appState.selectedTab {
         case .history:
-            appState.deleteClip(item)
+            if multi.isEmpty { appState.deleteClip(targets[0]) } else { appState.deleteClips(targets) }
         case .pinboard(let pinboardID):
-            let itemID = item.id
-            guard let entry = item.modelContext.flatMap({ context in
-                try? context.fetch(FetchDescriptor<PinboardEntry>(
-                    predicate: #Predicate { $0.clipboardItem?.id == itemID && $0.pinboard?.id == pinboardID }
-                )).first
-            }) else { return false }
-            appState.removeFromPinboard(entry)
+            let entries = targets.compactMap { item -> PinboardEntry? in
+                let itemID = item.id
+                return item.modelContext.flatMap { context in
+                    try? context.fetch(FetchDescriptor<PinboardEntry>(
+                        predicate: #Predicate { $0.clipboardItem?.id == itemID && $0.pinboard?.id == pinboardID }
+                    )).first
+                }
+            }
+            guard !entries.isEmpty else { return false }
+            if multi.isEmpty { appState.removeFromPinboard(entries[0]) } else { appState.removeFromPinboard(entries) }
         }
+        if !multi.isEmpty { appState.searchState.select(firstIndex) }
         return true
     }
 
@@ -722,7 +737,7 @@ final class PanelController {
             // The card under the pointer wins over the keyboard selection,
             // and becomes the selection so arrows continue from it (#26).
             if let idx = pointedCardIndex(in: items) {
-                appState.searchState.selectedIndex = idx
+                appState.searchState.select(idx)
                 showQuickLook(item: items[idx])
                 return true
             }
@@ -741,8 +756,12 @@ final class PanelController {
                 return true
             }
             if appState.previewItem != nil {
-                appState.searchState.selectedIndex = nil
+                appState.searchState.select(nil)
                 appState.selectForPreview(nil)
+                return true
+            }
+            if appState.searchState.hasMultiSelection {
+                appState.searchState.collapse()
                 return true
             }
             if appState.searchState.isActive {
@@ -758,6 +777,10 @@ final class PanelController {
 
         case 123: // Left arrow
             anchorKeyboard()
+            if NSEvent.modifierFlags.contains(.shift), quickLookPanel == nil, appState.previewItem == nil {
+                appState.searchState.extend(by: -1, maxIndex: maxIndex)
+                return true
+            }
             appState.searchState.moveSelection(by: -1, maxIndex: maxIndex)
             if let idx = appState.searchState.selectedIndex, idx < items.count {
                 if quickLookPanel != nil {
@@ -770,6 +793,10 @@ final class PanelController {
 
         case 124: // Right arrow
             anchorKeyboard()
+            if NSEvent.modifierFlags.contains(.shift), quickLookPanel == nil, appState.previewItem == nil {
+                appState.searchState.extend(by: 1, maxIndex: maxIndex)
+                return true
+            }
             appState.searchState.moveSelection(by: 1, maxIndex: maxIndex)
             if let idx = appState.searchState.selectedIndex, idx < items.count {
                 if quickLookPanel != nil {
@@ -786,6 +813,11 @@ final class PanelController {
                 return true
             }
 
+            let multi = appState.selectedClips
+            if !multi.isEmpty {
+                appState.paste(multi)
+                return true
+            }
             guard let idx = appState.searchState.selectedIndex,
                   idx < items.count else { return false }
             appState.paste(items[idx])
@@ -850,6 +882,23 @@ final class PanelController {
         quickLookItem = nil
         quickLookZoom = nil
         panel?.makeKey()
+    }
+
+    // MARK: - Dragging several clips
+
+    private let multiDragSource = MultiDragSource()
+
+    func beginMultiDrag(_ items: [ClipboardItem]) {
+        guard let view = panel?.contentView, let event = NSApp.currentEvent else { return }
+        let origin = view.convert(event.locationInWindow, from: nil)
+        let icon = NSImage(systemSymbolName: "doc.on.doc.fill", accessibilityDescription: nil) ?? NSImage()
+        let dragItems = PasteService.pasteboardItems(for: items, forDrag: true).enumerated().map { index, writer in
+            let dragItem = NSDraggingItem(pasteboardWriter: writer)
+            let offset = CGFloat(index) * 4
+            dragItem.setDraggingFrame(NSRect(x: origin.x - 20 + offset, y: origin.y - 20 - offset, width: 40, height: 40), contents: icon)
+            return dragItem
+        }
+        view.beginDraggingSession(with: dragItems, event: event, source: multiDragSource)
     }
 
     private func removeKeyMonitor() {
@@ -949,5 +998,12 @@ final class PanelController {
             contentHorizontalPadding
 
         return min(max(minWidth, cardContentWidth), maxWidth)
+    }
+}
+
+/// Lets a multi-clip drag be copied into other apps.
+final class MultiDragSource: NSObject, NSDraggingSource {
+    func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
+        .copy
     }
 }

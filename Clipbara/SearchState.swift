@@ -7,7 +7,14 @@ final class SearchState {
     var debouncedSearchText: String = ""
     var selectedContentTypes: Set<ContentType> = []
     var dateFilter: DateFilter = .all
+    /// The cursor: the card keyboard actions start from. With a multi-selection
+    /// it is the most recently clicked or extended card.
     var selectedIndex: Int? = nil
+    /// Every selected card, only while 2 or more are selected. Empty means the
+    /// selection is just `selectedIndex`.
+    private(set) var selectedIndices: Set<Int> = []
+    /// Where a ⇧ range starts from.
+    private(set) var anchorIndex: Int?
 
     private var debounceTask: Task<Void, Never>?
 
@@ -49,7 +56,7 @@ final class SearchState {
         // results: keep the selection (Tab out of the field relies on it).
         guard text != searchText else { return }
         searchText = text
-        selectedIndex = nil
+        select(nil)
         debounceTask?.cancel()
         debounceTask = Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(150))
@@ -63,14 +70,14 @@ final class SearchState {
         debouncedSearchText = ""
         selectedContentTypes = []
         dateFilter = .all
-        selectedIndex = nil
+        select(nil)
         debounceTask?.cancel()
     }
 
     func clearSearch() {
         searchText = ""
         debouncedSearchText = ""
-        selectedIndex = nil
+        select(nil)
         debounceTask?.cancel()
     }
 
@@ -80,7 +87,7 @@ final class SearchState {
         } else {
             selectedContentTypes.insert(type)
         }
-        selectedIndex = nil
+        select(nil)
     }
 
     func filteredItems(from items: [ClipboardItem]) -> [ClipboardItem] {
@@ -110,25 +117,89 @@ final class SearchState {
     }
 
     func moveSelection(by offset: Int, maxIndex: Int) {
-        guard maxIndex >= 0 else { selectedIndex = nil; return }
+        guard maxIndex >= 0 else { select(nil); return }
         if let current = selectedIndex {
-            selectedIndex = max(0, min(current + offset, maxIndex))
+            select(max(0, min(current + offset, maxIndex)))
         } else {
-            selectedIndex = 0
+            select(0)
         }
     }
 
     func ensureSelection(itemCount: Int) {
         guard itemCount > 0 else {
-            selectedIndex = nil
+            select(nil)
             return
         }
 
-        if let current = selectedIndex {
-            selectedIndex = max(0, min(current, itemCount - 1))
-        } else {
-            selectedIndex = 0
+        guard let current = selectedIndex else {
+            select(0)
+            return
         }
+        let clamped = max(0, min(current, itemCount - 1))
+        if selectedIndices.contains(where: { $0 >= itemCount }) {
+            // The list shrank under a multi-selection; fall back to the cursor.
+            select(clamped)
+        } else {
+            selectedIndex = clamped
+        }
+    }
+
+    // MARK: - Multi-selection
+
+    var hasMultiSelection: Bool { selectedIndices.count > 1 }
+
+    func isSelected(_ index: Int) -> Bool {
+        selectedIndices.isEmpty ? selectedIndex == index : selectedIndices.contains(index)
+    }
+
+    /// Plain selection of one card (or none); drops any multi-selection.
+    func select(_ index: Int?) {
+        selectedIndex = index
+        anchorIndex = index
+        selectedIndices = []
+    }
+
+    /// ⌘-click: adds the card to the selection, or takes it out again.
+    func toggle(_ index: Int) {
+        var set = selectedIndices.isEmpty ? Set(selectedIndex.map { [$0] } ?? []) : selectedIndices
+        if set.contains(index) {
+            guard set.count > 1 else { return }
+            set.remove(index)
+            if selectedIndex == index { selectedIndex = set.max() }
+        } else {
+            set.insert(index)
+            selectedIndex = index
+        }
+        anchorIndex = index
+        selectedIndices = set.count > 1 ? set : []
+        if set.count == 1 { selectedIndex = set.first }
+    }
+
+    /// ⇧-click: selects everything from the anchor to `index`.
+    func extend(to index: Int) {
+        let anchor = anchorIndex ?? selectedIndex ?? index
+        selectedIndex = index
+        anchorIndex = anchor
+        let range = Set(min(anchor, index)...max(anchor, index))
+        selectedIndices = range.count > 1 ? range : []
+    }
+
+    /// ⇧+←/→.
+    func extend(by offset: Int, maxIndex: Int) {
+        guard maxIndex >= 0 else { return }
+        extend(to: max(0, min((selectedIndex ?? 0) + offset, maxIndex)))
+    }
+
+    func selectAll(count: Int) {
+        guard count > 0 else { return }
+        selectedIndex = selectedIndex.map { min($0, count - 1) } ?? 0
+        anchorIndex = 0
+        selectedIndices = count > 1 ? Set(0..<count) : []
+    }
+
+    /// Escape: back to the single card under the cursor.
+    func collapse() {
+        select(selectedIndex)
     }
 }
 

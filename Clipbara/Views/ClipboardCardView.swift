@@ -13,6 +13,10 @@ struct ClipboardCardView: View {
     let onSelect: (ClipboardItem) -> Void
     let onPaste: (ClipboardItem) -> Void
     var onDelete: (() -> Void)? = nil
+    /// ⌘-click (false) or ⇧-click (true, a range). Nil keeps clicks as plain paste.
+    var onModifiedSelect: ((_ extendsRange: Bool) -> Void)? = nil
+    /// Set while this card is part of a multi-selection: dragging it drags them all.
+    var onMultiDrag: (() -> Void)? = nil
     var onRemoveFromPinboard: (() -> Void)? = nil
     /// The pinboard this card is shown in, if any. Its cards get Rename, Move
     /// and Add to other pinboards.
@@ -25,6 +29,7 @@ struct ClipboardCardView: View {
     @State private var isHovered = false
     @State private var isRenaming = false
     @State private var renameText = ""
+    @State private var multiDragStarted = false
 
     var body: some View {
         if item.isDeleted || item.modelContext == nil {
@@ -45,13 +50,14 @@ struct ClipboardCardView: View {
             }
         }
         .onTapGesture(perform: handleTap)
-        .optionalDrag(enabled: enableDrag) {
+        .optionalDrag(enabled: enableDrag && onMultiDrag == nil) {
             appState.draggedClipboardItemID = item.id
             appState.draggedPinboardEntry = nil
             return item.dragProvider()
         } preview: {
             dragPreview
         }
+        .simultaneousGesture(multiDragGesture)
         .optionalContextMenu(enabled: hasMenu) {
             menuItems
         }
@@ -175,7 +181,22 @@ struct ClipboardCardView: View {
             .scaleEffect(0.94)
     }
 
+    private var multiDragGesture: some Gesture {
+        DragGesture(minimumDistance: onMultiDrag == nil ? .infinity : 6)
+            .onChanged { _ in
+                guard !multiDragStarted else { return }
+                multiDragStarted = true
+                onMultiDrag?()
+            }
+            .onEnded { _ in multiDragStarted = false }
+    }
+
     private func handleTap() {
+        let flags = NSEvent.modifierFlags
+        if let onModifiedSelect, !flags.isDisjoint(with: [.command, .shift]) {
+            onModifiedSelect(flags.contains(.shift))
+            return
+        }
         onSelect(item)
         onPaste(item)
     }

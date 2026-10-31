@@ -31,23 +31,7 @@ struct CardGridView: View {
                             LazyHGrid(rows: rows, spacing: 8) {
                                 ForEach(filteredItems.indices, id: \.self) { index in
                                     let item = filteredItems[index]
-                                    ClipboardCardView(
-                                        item: item,
-                                        isSelected: appState.searchState.selectedIndex == index,
-                                        searchText: appState.searchState.debouncedSearchText,
-                                        cardWidth: cardW,
-                                        cardHeight: cardH,
-                                        pinboards: pinboards,
-                                        onSelect: { _ in
-                                            appState.searchState.selectedIndex = index
-                                        },
-                                        onPaste: { selected in
-                                            appState.paste(selected)
-                                        },
-                                        onDelete: {
-                                            restoreSelectionAfterDeletingItem(at: index)
-                                        }
-                                    )
+                                    cardView(item: item, index: index, cardWidth: cardW, cardHeight: cardH)
                                     .id(item.id)
                                 }
                             }
@@ -100,6 +84,38 @@ struct CardGridView: View {
         }
     }
 
+    @ViewBuilder
+    private func cardView(item: ClipboardItem, index: Int, cardWidth: CGFloat, cardHeight: CGFloat) -> some View {
+        let search = appState.searchState
+        ClipboardCardView(
+            item: item,
+            isSelected: search.isSelected(index),
+            searchText: search.debouncedSearchText,
+            cardWidth: cardWidth,
+            cardHeight: cardHeight,
+            pinboards: pinboards,
+            onSelect: { _ in
+                search.select(index)
+            },
+            onPaste: { selected in
+                appState.paste(selected)
+            },
+            onDelete: {
+                restoreSelectionAfterDeletingItem(at: index)
+            },
+            onModifiedSelect: { extendsRange in
+                if extendsRange {
+                    search.extend(to: index)
+                } else {
+                    search.toggle(index)
+                }
+            },
+            onMultiDrag: search.hasMultiSelection && search.isSelected(index)
+                ? { appState.beginMultiDrag(appState.selectedClips) }
+                : nil
+        )
+    }
+
     private func updateFilteredItems(from sourceItems: [ClipboardItem]) {
         let updated = appState.searchState.filteredItems(from: sourceItems)
         filteredItems = updated
@@ -113,11 +129,11 @@ struct CardGridView: View {
     private func restoreSelectionAfterDeletingItem(at deletedIndex: Int) {
         let remainingCount = max(filteredItems.count - 1, 0)
         guard remainingCount > 0 else {
-            appState.searchState.selectedIndex = nil
+            appState.searchState.select(nil)
             return
         }
 
-        appState.searchState.selectedIndex = min(deletedIndex, remainingCount - 1)
+        appState.searchState.select(min(deletedIndex, remainingCount - 1))
     }
 }
 
