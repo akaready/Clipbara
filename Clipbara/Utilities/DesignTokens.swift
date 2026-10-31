@@ -1,5 +1,9 @@
 import SwiftUI
 
+/// Raw values are what is stored in UserDefaults.
+enum CardStyle: String { case classic, colorful }
+enum PanelBackground: String { case solid, glass }
+
 enum DesignTokens {
     // MARK: - Content Type Accent Colors
 
@@ -46,6 +50,20 @@ enum DesignTokens {
                 ? Color.white.opacity(0.10)
                 : Color.black.opacity(0.08)
         }
+    }
+
+    // MARK: - Colorful Card Style
+
+    enum Colorful {
+        static let cornerRadius: CGFloat = 12
+        static let aspect: CGFloat = 1.05 // max width / height
+        static let headerHeight: CGFloat = 46
+        static let footerHeight: CGFloat = 22
+        static let iconScale: CGFloat = 1.6 // app icon size relative to the header
+        static let iconOffset: CGFloat = 0.25 // fraction of the icon cropped by the card's top/right edge
+        static let titleFont: Font = .system(size: 13, weight: .semibold)
+        static let timeFont: Font = .system(size: 10)
+        static let footerFont: Font = .system(size: 10)
     }
 
     // MARK: - Card Header

@@ -32,15 +32,27 @@ struct ClipboardCardView: View {
     @State private var multiDragStarted = false
     @AppStorage(PanelController.cardScaleDefaultsKey) private var cardScale: Double = 1
     @AppStorage(PanelController.fitImageCardsDefaultsKey) private var fitImageCards: Bool = false
+    @AppStorage(PanelController.cardStyleDefaultsKey) private var cardStyle: CardStyle = .classic
+
+    private var isColorful: Bool { cardStyle == .colorful }
+    private var cornerRadius: CGFloat {
+        isColorful ? DesignTokens.Colorful.cornerRadius : DesignTokens.Card.cornerRadius
+    }
 
     /// With "fit image cards", an image card is as wide as its image at the
     /// card height (never wider than a normal card, never too narrow to click).
     private var width: CGFloat {
+        // Colorful cards are squarer.
+        let baseWidth = isColorful ? min(cardWidth, cardHeight * DesignTokens.Colorful.aspect) : cardWidth
         guard fitImageCards, item.contentType == .image,
-              let size = ThumbnailImageCache.image(for: item)?.size, size.height > 0 else { return cardWidth }
-        let chromeHeight: CGFloat = 76 // padding, header, footer and spacing around the image
-        let fitted = (cardHeight - chromeHeight) * size.width / size.height + 2 * DesignTokens.Card.horizontalPadding
-        return min(max(fitted, cardWidth * 0.35), cardWidth * 2.5)
+              let size = ThumbnailImageCache.image(for: item)?.size, size.height > 0 else { return baseWidth }
+        // Header and footer (plus padding and spacing, in Classic) around the image.
+        let chromeHeight: CGFloat = isColorful
+            ? DesignTokens.Colorful.headerHeight + DesignTokens.Colorful.footerHeight
+            : 76
+        let padding: CGFloat = isColorful ? 0 : 2 * DesignTokens.Card.horizontalPadding
+        let fitted = (cardHeight - chromeHeight) * size.width / size.height + padding
+        return min(max(fitted, baseWidth * 0.35), baseWidth * 2.5)
     }
 
     var body: some View {
@@ -146,22 +158,37 @@ struct ClipboardCardView: View {
         }
     }
 
-    private var cardSurface: some View {
-        VStack(spacing: DesignTokens.Card.contentSpacing) {
-            headerView
+    @ViewBuilder
+    private var cardLayout: some View {
+        if isColorful {
+            VStack(spacing: 0) {
+                colorfulHeader
 
-            contentView
+                colorfulContentView
 
-            footerView
+                colorfulFooter
+            }
+        } else {
+            VStack(spacing: DesignTokens.Card.contentSpacing) {
+                headerView
+
+                contentView
+
+                footerView
+            }
+            .padding(.top, DesignTokens.Card.topPadding)
+            .padding(.horizontal, DesignTokens.Card.horizontalPadding)
+            .padding(.bottom, 8)
         }
-        .padding(.top, DesignTokens.Card.topPadding)
-        .padding(.horizontal, DesignTokens.Card.horizontalPadding)
-        .padding(.bottom, 8)
+    }
+
+    private var cardSurface: some View {
+        cardLayout
         .frame(width: width, height: cardHeight)
         .background(cardFillColor)
-        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Card.cornerRadius, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: DesignTokens.Card.cornerRadius, style: .continuous)
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .strokeBorder(
                     isSelected
                         ? DesignTokens.Selection.borderColor
@@ -281,23 +308,97 @@ struct ClipboardCardView: View {
             Spacer()
 
             if hasMenu {
-                Menu {
-                    menuItems
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(DesignTokens.Badge.textColor(for: colorScheme))
-                        .opacity(isHovered || isSelected ? 0.72 : 0.34)
-                        .frame(width: 24, height: 18)
-                        .contentShape(Rectangle())
-                }
-                .menuStyle(.button)
-                .buttonStyle(.plain)
-                .menuIndicator(.hidden)
-                .fixedSize()
-                .help("More actions")
+                menuButton
             }
         }
+    }
+
+    private var menuButton: some View {
+        Menu {
+            menuItems
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(DesignTokens.Badge.textColor(for: colorScheme))
+                .opacity(isHovered || isSelected ? 0.72 : 0.34)
+                .frame(width: 24, height: 18)
+                .contentShape(Rectangle())
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("More actions")
+    }
+
+    // MARK: - Colorful Style
+
+    private var colorfulHeader: some View {
+        let title = item.userTitle ?? (item.contentType == .image ? nil : item.contentType.displayName)
+        let iconSize = DesignTokens.Colorful.headerHeight * DesignTokens.Colorful.iconScale
+        let crop = iconSize * DesignTokens.Colorful.iconOffset
+
+        return ZStack(alignment: .topTrailing) {
+            AppColorProvider.headerColor(for: item.sourceAppBundleId, colorScheme: colorScheme)
+
+            if let bundleId = item.sourceAppBundleId {
+                Image(nsImage: AppIconProvider.icon(for: bundleId, size: 128))
+                    .resizable()
+                    .frame(width: iconSize, height: iconSize)
+                    .offset(x: crop, y: -crop)
+            }
+
+            VStack(alignment: .leading, spacing: 1) {
+                if let title {
+                    Text(title)
+                        .font(DesignTokens.Colorful.titleFont)
+                        .lineLimit(1)
+                }
+                Text(RelativeTimeFormatter.string(for: item.copiedAt))
+                    .font(DesignTokens.Colorful.timeFont)
+                    .opacity(0.8)
+                    .lineLimit(1)
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 12)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        }
+        .frame(height: DesignTokens.Colorful.headerHeight)
+        .clipped()
+    }
+
+    @ViewBuilder
+    private var colorfulContentView: some View {
+        if item.contentType == .image || item.contentType == .color {
+            cardContent
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
+        } else {
+            cardContent
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .padding(.horizontal, DesignTokens.Card.horizontalPadding)
+                .padding(.top, 8)
+                .clipped()
+        }
+    }
+
+    private var colorfulFooter: some View {
+        ZStack {
+            Text(footerInfo)
+                .font(DesignTokens.Colorful.footerFont)
+                .foregroundStyle(DesignTokens.Badge.textColor(for: colorScheme))
+                .lineLimit(1)
+                .padding(.horizontal, 28)
+
+            if hasMenu {
+                HStack {
+                    Spacer()
+                    menuButton
+                }
+                .padding(.trailing, 4)
+            }
+        }
+        .frame(height: DesignTokens.Colorful.footerHeight)
     }
 
     private var footerInfo: String {

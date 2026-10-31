@@ -21,6 +21,8 @@ struct AppearanceSettingsTab: View {
     @AppStorage(PanelController.fullWidthDefaultsKey) private var fullWidth: Bool = false
     @AppStorage(PanelController.cardScaleDefaultsKey) private var cardScale: Double = 1
     @AppStorage(PanelController.fitImageCardsDefaultsKey) private var fitImageCards: Bool = false
+    @AppStorage(PanelController.cardStyleDefaultsKey) private var cardStyle: CardStyle = .classic
+    @AppStorage(PanelController.panelBackgroundDefaultsKey) private var panelBackground: PanelBackground = .solid
     @State private var reducesMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
 
     var body: some View {
@@ -46,6 +48,18 @@ struct AppearanceSettingsTab: View {
                 Text("Medium").tag(1.0)
                 Text("Large").tag(1.25)
                 Text("Extra large").tag(1.5)
+            }
+            .pickerStyle(.segmented)
+
+            Picker("Card Style", selection: $cardStyle) {
+                Text("Classic").tag(CardStyle.classic)
+                Text("Colorful").tag(CardStyle.colorful)
+            }
+            .pickerStyle(.segmented)
+
+            Picker("Panel Background", selection: $panelBackground) {
+                Text("Solid").tag(PanelBackground.solid)
+                Text("Glass").tag(PanelBackground.glass)
             }
             .pickerStyle(.segmented)
 

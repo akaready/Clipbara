@@ -57,6 +57,8 @@ final class PanelController {
     nonisolated static let fullWidthDefaultsKey = "panelFullWidth"
     nonisolated static let cardScaleDefaultsKey = "cardScale"
     nonisolated static let fitImageCardsDefaultsKey = "fitImageCards"
+    nonisolated static let cardStyleDefaultsKey = "cardStyle"
+    nonisolated static let panelBackgroundDefaultsKey = "panelBackground"
 
     private var fullWidth: Bool { UserDefaults.standard.bool(forKey: Self.fullWidthDefaultsKey) }
 

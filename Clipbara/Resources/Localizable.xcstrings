@@ -4019,7 +4019,13 @@
     "Small" : {},
     "Medium" : {},
     "Large" : {},
-    "Extra large" : {}
+    "Extra large" : {},
+    "Card Style" : {},
+    "Classic" : {},
+    "Colorful" : {},
+    "Panel Background" : {},
+    "Solid" : {},
+    "Glass" : {}
   },
   "version" : "1.0"
 }

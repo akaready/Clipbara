@@ -7,6 +7,7 @@ struct HistoryPanelView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Query(sort: \ClipboardItem.copiedAt, order: .reverse)
     private var items: [ClipboardItem]
+    @AppStorage(PanelController.panelBackgroundDefaultsKey) private var panelBackground: PanelBackground = .solid
     @State private var showsIPhoneNotice = IPhoneAppNotice.shouldShow(syncEnabled: Self.syncEnabled)
 
     private static var syncEnabled: Bool {
@@ -20,7 +21,9 @@ struct HistoryPanelView: View {
     var body: some View {
         ZStack {
             VisualEffectBackground(
-                material: colorScheme == .dark ? .hudWindow : .popover
+                material: panelBackground == .glass
+                    ? .underWindowBackground
+                    : (colorScheme == .dark ? .hudWindow : .popover)
             )
                 .ignoresSafeArea()
 
