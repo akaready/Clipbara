@@ -12,8 +12,10 @@ final class CheckForUpdatesViewModel: ObservableObject {
     private var observation: NSKeyValueObservation?
 
     init() {
+        // Patched fork: never start Sparkle. Upstream releases are reviewed and
+        // merged by hand, so the upstream appcast must not replace this build.
         updaterController = SPUStandardUpdaterController(
-            startingUpdater: true,
+            startingUpdater: false,
             updaterDelegate: nil,
             userDriverDelegate: nil
         )
