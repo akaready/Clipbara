@@ -4,6 +4,7 @@ import AppKit
 struct FileCardContent: View {
     let item: ClipboardItem
     var searchText: String = ""
+    var scale: CGFloat = 1
     @Environment(\.colorScheme) private var colorScheme
     @State private var cachedFileIcon: NSImage?
 
@@ -23,10 +24,10 @@ struct FileCardContent: View {
         VStack(spacing: 6) {
             Image(nsImage: cachedFileIcon ?? NSWorkspace.shared.icon(for: .data))
                 .resizable()
-                .frame(width: 32, height: 32)
+                .frame(width: 32 * scale, height: 32 * scale)
 
             Text(TextHighlighter.highlight(fileName, query: searchText))
-                .font(.system(size: 11))
+                .font(.system(size: 11 * scale))
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(DesignTokens.Body.textColor(for: colorScheme))

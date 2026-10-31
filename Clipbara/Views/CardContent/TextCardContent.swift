@@ -3,6 +3,7 @@ import SwiftUI
 struct TextCardContent: View {
     let item: ClipboardItem
     var searchText: String = ""
+    var scale: CGFloat = 1
     @Environment(\.colorScheme) private var colorScheme
     @State private var isCode: Bool = false
 
@@ -23,9 +24,9 @@ struct TextCardContent: View {
                 Text(TextHighlighter.highlight(previewText, query: searchText))
             }
         }
-        .font(.system(size: DesignTokens.Body.fontSize, design: isCode ? .monospaced : .default))
-        .lineSpacing(DesignTokens.Body.lineSpacing)
-        .lineLimit(DesignTokens.Body.maxLines)
+        .font(.system(size: DesignTokens.Body.fontSize * scale, design: isCode ? .monospaced : .default))
+        .lineSpacing(DesignTokens.Body.lineSpacing * scale)
+        .lineLimit(scale > 1 ? nil : DesignTokens.Body.maxLines)
         .multilineTextAlignment(.leading)
         .foregroundStyle(DesignTokens.Body.textColor(for: colorScheme))
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

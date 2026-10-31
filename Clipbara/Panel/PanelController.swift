@@ -56,6 +56,7 @@ final class PanelController {
     /// panel opens or resizes. Missing means fit content at 1x.
     nonisolated static let fullWidthDefaultsKey = "panelFullWidth"
     nonisolated static let cardScaleDefaultsKey = "cardScale"
+    nonisolated static let fitImageCardsDefaultsKey = "fitImageCards"
 
     private var fullWidth: Bool { UserDefaults.standard.bool(forKey: Self.fullWidthDefaultsKey) }
 
@@ -65,11 +66,11 @@ final class PanelController {
         return CGFloat(min(max(value, 0.5), 2))
     }
 
-    /// The 280pt panel at 1x; the card area (188pt card + 26pt margins) grows with the scale.
-    private var baseHeight: CGFloat { 280 + 214 * (cardScale - 1) }
+    /// The 280pt panel at 1x; the card area (188pt card) grows with the scale.
+    private var baseHeight: CGFloat { 280 + 188 * (cardScale - 1) }
     private let minimumPanelWidth: CGFloat = 720
     private let maximumScreenWidthRatio: CGFloat = 0.90
-    private let estimatedCardWidth: CGFloat = 228
+    private var estimatedCardWidth: CGFloat { 228 * cardScale }
     private let estimatedCardSpacing: CGFloat = 8
     private let contentHorizontalPadding: CGFloat = 32
     private let maximumVisibleCardCount = 6

@@ -20,6 +20,7 @@ struct AppearanceSettingsTab: View {
     @AppStorage(PanelController.animatesPanelDefaultsKey) private var animatesPanel: Bool = true
     @AppStorage(PanelController.fullWidthDefaultsKey) private var fullWidth: Bool = false
     @AppStorage(PanelController.cardScaleDefaultsKey) private var cardScale: Double = 1
+    @AppStorage(PanelController.fitImageCardsDefaultsKey) private var fitImageCards: Bool = false
     @State private var reducesMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
 
     var body: some View {
@@ -47,6 +48,8 @@ struct AppearanceSettingsTab: View {
                 Text("Extra large").tag(1.5)
             }
             .pickerStyle(.segmented)
+
+            Toggle("Fit image cards to image", isOn: $fitImageCards)
 
             HStack {
                 VStack(alignment: .leading, spacing: 2) {

@@ -51,10 +51,10 @@ enum DesignTokens {
     // MARK: - Card Header
 
     enum Header {
-        static let titleFont: Font = .system(size: 12, weight: .semibold)
-        static let subtitleFont: Font = .system(size: 11, weight: .regular)
+        static let titleFont: Font = .system(size: 11, weight: .semibold)
+        static let subtitleFont: Font = .system(size: 10, weight: .regular)
         static let subtitleOpacity: Double = 0.8
-        static let appIconSize: CGFloat = 26
+        static let appIconSize: CGFloat = 22
         static let appIconCornerRadius: CGFloat = 6
         static let badgeVerticalPadding: CGFloat = 3
         static let badgeHorizontalPadding: CGFloat = 7
@@ -79,7 +79,7 @@ enum DesignTokens {
     // MARK: - Card Footer Badge
 
     enum Badge {
-        static let font: Font = .system(size: 11, weight: .medium)
+        static let font: Font = .system(size: 10, weight: .medium)
         static let verticalPadding: CGFloat = 4
         static let horizontalPadding: CGFloat = 8
         static let cornerRadius: CGFloat = 8

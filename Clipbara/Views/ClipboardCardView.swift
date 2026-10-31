@@ -31,6 +31,17 @@ struct ClipboardCardView: View {
     @State private var renameText = ""
     @State private var multiDragStarted = false
     @AppStorage(PanelController.cardScaleDefaultsKey) private var cardScale: Double = 1
+    @AppStorage(PanelController.fitImageCardsDefaultsKey) private var fitImageCards: Bool = false
+
+    /// With "fit image cards", an image card is as wide as its image at the
+    /// card height (never wider than a normal card, never too narrow to click).
+    private var width: CGFloat {
+        guard fitImageCards, item.contentType == .image,
+              let size = ThumbnailImageCache.image(for: item)?.size, size.height > 0 else { return cardWidth }
+        let chromeHeight: CGFloat = 76 // padding, header, footer and spacing around the image
+        let fitted = (cardHeight - chromeHeight) * size.width / size.height + 2 * DesignTokens.Card.horizontalPadding
+        return min(max(fitted, cardWidth * 0.6), cardWidth)
+    }
 
     var body: some View {
         if item.isDeleted || item.modelContext == nil {
@@ -42,8 +53,6 @@ struct ClipboardCardView: View {
 
     private var cardBody: some View {
         cardSurface
-        .scaleEffect(cardScale, anchor: .topLeading)
-        .frame(width: cardWidth * cardScale, height: cardHeight * cardScale, alignment: .topLeading)
         .onHover { hovering in
             isHovered = hovering
             if hovering {
@@ -148,7 +157,7 @@ struct ClipboardCardView: View {
         .padding(.top, DesignTokens.Card.topPadding)
         .padding(.horizontal, DesignTokens.Card.horizontalPadding)
         .padding(.bottom, 8)
-        .frame(width: cardWidth, height: cardHeight)
+        .frame(width: width, height: cardHeight)
         .background(cardFillColor)
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Card.cornerRadius, style: .continuous))
         .overlay(
@@ -236,20 +245,23 @@ struct ClipboardCardView: View {
     }
 
     private var typeBadge: some View {
-        let tint = DesignTokens.typeTint(for: item.contentType, itemColor: item.textContent)
+        // Grey, not the type tint: the image tint is dark navy and vanishes on dark cards.
+        let title = item.userTitle ?? (item.contentType == .image ? nil : item.contentType.displayName)
 
         return HStack(spacing: 5) {
             Image(systemName: item.contentType.systemImage)
                 .font(.system(size: 10, weight: .semibold))
 
-            Text(item.userTitle ?? item.contentType.displayName)
-                .font(DesignTokens.Header.titleFont)
-                .lineLimit(1)
+            if let title {
+                Text(title)
+                    .font(DesignTokens.Header.titleFont)
+                    .lineLimit(1)
+            }
         }
-        .foregroundStyle(tint)
+        .foregroundStyle(DesignTokens.Badge.textColor(for: colorScheme))
         .padding(.vertical, DesignTokens.Header.badgeVerticalPadding)
         .padding(.horizontal, DesignTokens.Header.badgeHorizontalPadding)
-        .background(tint.opacity(colorScheme == .dark ? 0.18 : 0.20))
+        .background(DesignTokens.Badge.backgroundColor(for: colorScheme))
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Header.badgeCornerRadius, style: .continuous))
     }
 
@@ -353,17 +365,17 @@ struct ClipboardCardView: View {
     private var cardContent: some View {
         switch item.contentType {
         case .plainText, .richText, .html:
-            TextCardContent(item: item, searchText: searchText)
+            TextCardContent(item: item, searchText: searchText, scale: CGFloat(cardScale))
         case .image:
             ImageCardContent(item: item)
         case .url:
-            LinkCardContent(item: item, searchText: searchText)
+            LinkCardContent(item: item, searchText: searchText, scale: CGFloat(cardScale))
         case .fileURL:
-            FileCardContent(item: item, searchText: searchText)
+            FileCardContent(item: item, searchText: searchText, scale: CGFloat(cardScale))
         case .color:
-            ColorCardContent(item: item)
+            ColorCardContent(item: item, scale: CGFloat(cardScale))
         case .unknown:
-            TextCardContent(item: item, searchText: searchText)
+            TextCardContent(item: item, searchText: searchText, scale: CGFloat(cardScale))
         }
     }
 
