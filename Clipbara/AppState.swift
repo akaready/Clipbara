@@ -170,36 +170,13 @@ final class AppState {
         clipQueue.stop()
         clipboardMonitor.skipNextChange()
         pasteService.paste(item: item, asPlainText: asPlainText)
-        hidePanelThenPaste()
-    }
-
-    /// ⌘V has to reach the app behind the panel, so it is sent once the panel
-    /// is off screen and no longer the key window. With the panel already
-    /// closed, `hidePanel` never runs its completion, so send it directly.
-    private func hidePanelThenPaste() {
-        guard DirectPaste.isReady else {
-            hidePanel()
-            return
-        }
-        if panelController.isVisible {
+        // ⌘V has to reach the app behind the panel, so send it once the
+        // panel is off screen and no longer the key window.
+        if DirectPaste.isReady {
             hidePanel(then: { _ = DirectPaste.sendPasteShortcut() })
         } else {
-            _ = DirectPaste.sendPasteShortcut()
+            hidePanel()
         }
-    }
-
-    /// Global hotkey: pastes the newest clip as plain text into the frontmost app.
-    private func pasteLatestAsPlainText() {
-        guard let context = modelContainer?.mainContext else { return }
-        var descriptor = FetchDescriptor<ClipboardItem>(
-            sortBy: [SortDescriptor(\.copiedAt, order: .reverse)]
-        )
-        descriptor.fetchLimit = 1
-        guard let item = try? context.fetch(descriptor).first else { return }
-        clipQueue.stop()
-        clipboardMonitor.skipNextChange()
-        pasteService.paste(item: item, asPlainText: true)
-        hidePanelThenPaste()
     }
 
     // MARK: - Several clips (multi-selection)
@@ -217,7 +194,11 @@ final class AppState {
         clipQueue.stop()
         clipboardMonitor.skipNextChange()
         pasteService.pasteMany(items: items)
-        hidePanelThenPaste()
+        if DirectPaste.isReady {
+            hidePanel(then: { _ = DirectPaste.sendPasteShortcut() })
+        } else {
+            hidePanel()
+        }
     }
 
     /// ⌘C for a multi-selection: onto the clipboard, panel stays open.
@@ -362,11 +343,6 @@ final class AppState {
         KeyboardShortcuts.onKeyDown(for: .toggleClipQueue) { [weak self] in
             Task { @MainActor in
                 self?.toggleClipQueue()
-            }
-        }
-        KeyboardShortcuts.onKeyDown(for: .pasteLatestAsPlainText) { [weak self] in
-            Task { @MainActor in
-                self?.pasteLatestAsPlainText()
             }
         }
         KeyboardShortcuts.onKeyDown(for: .clearHistory) { [weak self] in

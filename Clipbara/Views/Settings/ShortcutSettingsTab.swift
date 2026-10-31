@@ -24,16 +24,6 @@ struct ShortcutSettingsTab: View {
                 KeyboardShortcuts.Recorder(for: .toggleClipQueue)
             }
             HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Paste Latest as Plain Text")
-                    Text("Pastes your most recent clip without formatting.")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                KeyboardShortcuts.Recorder(for: .pasteLatestAsPlainText)
-            }
-            HStack {
                 Text("Clear All History")
                 Spacer()
                 KeyboardShortcuts.Recorder(for: .clearHistory)
