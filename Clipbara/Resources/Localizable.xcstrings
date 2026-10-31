@@ -2309,6 +2309,22 @@
         }
       }
     },
+    "Paste Latest as Plain Text" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "최근 클립을 일반 텍스트로 붙여넣기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "以纯文本粘贴最近的剪贴内容"
+          }
+        }
+      }
+    },
     "Paste into the Active App" : {
       "localizations" : {
         "ko" : {
@@ -2337,6 +2353,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "保留格式粘贴"
+          }
+        }
+      }
+    },
+    "Pastes your most recent clip without formatting." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "가장 최근 클립을 서식 없이 붙여넣습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "以纯文本粘贴你最近的一条剪贴内容。"
           }
         }
       }
