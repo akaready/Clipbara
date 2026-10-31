@@ -184,6 +184,13 @@ final class SearchState {
         selectedIndices = range.count > 1 ? range : []
     }
 
+    /// ⇧+←/→ grows the selection, but only with Shift alone. A held Hyper key
+    /// (⌘⌃⌥⇧) or the ⇧ of the ⇧⌘V open shortcut must not turn plain arrows
+    /// into a range select, which made Return paste several clips.
+    nonisolated static func isRangeExtend(_ flags: NSEvent.ModifierFlags) -> Bool {
+        flags.intersection([.command, .option, .control, .shift]) == .shift
+    }
+
     /// ⇧+←/→.
     func extend(by offset: Int, maxIndex: Int) {
         guard maxIndex >= 0 else { return }

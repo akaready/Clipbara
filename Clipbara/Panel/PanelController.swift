@@ -777,13 +777,6 @@ final class PanelController {
         return true
     }
 
-    /// ⇧+←/→ grows the selection, but only with Shift alone. A held Hyper key
-    /// (⌘⌃⌥⇧) or the ⇧ of the ⇧⌘V open shortcut must not turn plain arrows
-    /// into a range select, which made Return paste several clips.
-    nonisolated static func isRangeExtend(_ flags: NSEvent.ModifierFlags) -> Bool {
-        flags.intersection([.command, .option, .control, .shift]) == .shift
-    }
-
     private func processKey(_ keyCode: UInt16) -> Bool {
         guard let appState, isVisible else { return false }
         let items = appState.currentFilteredItems
@@ -844,7 +837,7 @@ final class PanelController {
 
         case 123: // Left arrow
             anchorKeyboard()
-            if Self.isRangeExtend(NSEvent.modifierFlags), quickLookPanel == nil, appState.previewItem == nil {
+            if SearchState.isRangeExtend(NSEvent.modifierFlags), quickLookPanel == nil, appState.previewItem == nil {
                 appState.searchState.extend(by: -1, maxIndex: maxIndex)
                 return true
             }
@@ -860,7 +853,7 @@ final class PanelController {
 
         case 124: // Right arrow
             anchorKeyboard()
-            if Self.isRangeExtend(NSEvent.modifierFlags), quickLookPanel == nil, appState.previewItem == nil {
+            if SearchState.isRangeExtend(NSEvent.modifierFlags), quickLookPanel == nil, appState.previewItem == nil {
                 appState.searchState.extend(by: 1, maxIndex: maxIndex)
                 return true
             }

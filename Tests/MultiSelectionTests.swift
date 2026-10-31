@@ -82,9 +82,9 @@ final class MultiSelectionTests: XCTestCase {
     }
 
     func testOnlyShiftAloneExtendsTheRange() {
-        XCTAssertTrue(PanelController.isRangeExtend([.shift]))
-        XCTAssertFalse(PanelController.isRangeExtend([]))
-        XCTAssertFalse(PanelController.isRangeExtend([.command, .control, .option, .shift])) // Hyper held
-        XCTAssertFalse(PanelController.isRangeExtend([.command, .shift]))
+        XCTAssertTrue(SearchState.isRangeExtend(NSEvent.ModifierFlags.shift))
+        XCTAssertFalse(SearchState.isRangeExtend([]))
+        XCTAssertFalse(SearchState.isRangeExtend([.command, .control, .option, .shift])) // Hyper held
+        XCTAssertFalse(SearchState.isRangeExtend(NSEvent.ModifierFlags([.command, .shift])))
     }
 }
