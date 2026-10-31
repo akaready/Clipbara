@@ -40,6 +40,9 @@ struct CardGridView: View {
                             .padding(.horizontal, 16)
                             .padding(.vertical, 9)
                         }
+                        // A new scroll view per presentation starts at the first card, so the
+                        // reset selection on open doesn't animate back from the last scroll position.
+                        .id(appState.panelPresentationID)
                         .onChange(of: appState.searchState.selectedIndex) { _, newIndex in
                             if let idx = newIndex, idx < filteredItems.count {
                                 withAnimation(.easeOut(duration: 0.15)) {
