@@ -203,9 +203,9 @@ struct ClipboardCardView: View {
         }
         .shadow(
             color: cardShadowColor,
-            radius: isColorful ? 5 : isSelected ? DesignTokens.Selection.selectedShadowRadius
+            radius: isColorful ? 3 : isSelected ? DesignTokens.Selection.selectedShadowRadius
                 : (isHovered ? DesignTokens.Selection.hoverShadowRadius : DesignTokens.Selection.defaultShadowRadius),
-            y: isSelected ? 6 : (isHovered ? 5 : 2)
+            y: isColorful ? 1 : isSelected ? 6 : (isHovered ? 5 : 2)
         )
         .scaleEffect(isSelected && !isColorful ? 1.01 : (isHovered ? DesignTokens.Selection.hoverScale : 1.0))
         .offset(y: isHovered && !isSelected ? DesignTokens.Selection.hoverLift : 0)
@@ -451,7 +451,7 @@ struct ClipboardCardView: View {
     }
 
     private var cardShadowColor: Color {
-        if isColorful { return .black.opacity(colorScheme == .dark ? 0.5 : (isHovered ? 0.28 : 0.16)) }
+        if isColorful { return .black.opacity(colorScheme == .dark ? 0.2 : (isHovered ? 0.14 : 0.08)) }
         if isSelected {
             return DesignTokens.Selection.borderColor.opacity(DesignTokens.Selection.selectedShadowOpacity)
         }
