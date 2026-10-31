@@ -34,17 +34,21 @@ struct ExclusionSettingsTab: View {
                     addApp()
                 } label: {
                     Image(systemName: "plus")
+                        .frame(width: 28, height: 22)
                 }
 
                 Button {
                     removeSelected()
                 } label: {
                     Image(systemName: "minus")
+                        .frame(width: 28, height: 22)
                 }
                 .disabled(selection == nil)
 
                 Spacer()
             }
+            .buttonStyle(.bordered)
+            .controlSize(.regular)
         }
         .padding()
     }
@@ -57,18 +61,12 @@ struct ExclusionSettingsTab: View {
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
 
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-
-        guard let bundle = Bundle(url: url),
-              let bundleId = bundle.bundleIdentifier else { return }
-
-        let appName = bundle.object(forInfoDictionaryKey: "CFBundleName") as? String
-            ?? url.deletingPathExtension().lastPathComponent
+        guard panel.runModal() == .OK, let url = panel.url,
+              let excluded = ExcludedApp.make(appAt: url) else { return }
 
         // Check duplicate
-        if excludedApps.contains(where: { $0.bundleId == bundleId }) { return }
+        if excludedApps.contains(where: { $0.bundleId == excluded.bundleId }) { return }
 
-        let excluded = ExcludedApp(bundleId: bundleId, appName: appName)
         modelContext.insert(excluded)
         try? modelContext.save()
         appState.clipboardMonitor.loadExcludedApps()
