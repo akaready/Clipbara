@@ -90,6 +90,12 @@ final class AppState {
         }
         setupHotkey()
 
+        // Launch is after the app's own setup; the alert needs NSApp running.
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(400))
+            DirectPaste.askForPermissionIfNeeded()
+        }
+
         // Render the panel once off screen so the first hotkey press is instant.
         Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(300))
@@ -175,7 +181,7 @@ final class AppState {
         if DirectPaste.isReady {
             hidePanel(then: { _ = DirectPaste.sendPasteShortcut() })
         } else {
-            hidePanel()
+            hidePanel(then: { DirectPaste.askForPermissionIfNeeded(afterPaste: true) })
         }
     }
 
@@ -197,7 +203,7 @@ final class AppState {
         if DirectPaste.isReady {
             hidePanel(then: { _ = DirectPaste.sendPasteShortcut() })
         } else {
-            hidePanel()
+            hidePanel(then: { DirectPaste.askForPermissionIfNeeded(afterPaste: true) })
         }
     }
 

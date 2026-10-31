@@ -57,6 +57,33 @@ enum DirectPaste {
         NSWorkspace.shared.open(url)
     }
 
+    /// Set once a paste has triggered the alert, so it shows at most once per launch.
+    private static var askedAfterPaste = false
+
+    /// When "paste into active app" is on but Accessibility is missing, asks the
+    /// user for it with our own alert (the sandboxed build gets no system prompt).
+    /// `afterPaste` limits this to once per launch, for calls right after a paste.
+    static func askForPermissionIfNeeded(afterPaste: Bool = false) {
+        guard isEnabled, !hasPermission else { return }
+        if afterPaste {
+            guard !askedAfterPaste else { return }
+            askedAfterPaste = true
+        }
+        requestPermission()
+
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = String(localized: "Allow Clipbara to paste into apps")
+        alert.informativeText = String(localized: "Clipbara needs Accessibility access to paste the clip you pick into the app you're using. In System Settings → Privacy & Security → Accessibility, turn on Clipbara (add it with + if it isn't listed). Until then, picked clips are copied to the clipboard so you can press ⌘V yourself.")
+        alert.addButton(withTitle: String(localized: "Open Accessibility Settings"))
+        alert.addButton(withTitle: String(localized: "Not Now"))
+        alert.window.level = .floating
+        if alert.runModal() == .alertFirstButtonReturn {
+            openAccessibilitySettings()
+            NSWorkspace.shared.activateFileViewerSelecting([Bundle.main.bundleURL])
+        }
+    }
+
     /// Sends ⌘V to whichever app has keyboard focus. Call only after the
     /// panel is off screen, or the panel itself receives it.
     @discardableResult

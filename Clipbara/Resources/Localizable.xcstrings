@@ -306,6 +306,8 @@
         }
       }
     },
+    "Allow Clipbara to paste into apps" : {
+    },
     "Already in %@" : {
       "localizations" : {
         "ko" : {
@@ -465,6 +467,8 @@
           }
         }
       }
+    },
+    "Clipbara needs Accessibility access to paste the clip you pick into the app you're using. In System Settings → Privacy & Security → Accessibility, turn on Clipbara (add it with + if it isn't listed). Until then, picked clips are copied to the clipboard so you can press ⌘V yourself." : {
     },
     "Clear All History" : {
       "localizations" : {
@@ -2180,6 +2184,8 @@
           }
         }
       }
+    },
+    "Open Accessibility Settings" : {
     },
     "Open Accessibility Settings…" : {
       "localizations" : {
