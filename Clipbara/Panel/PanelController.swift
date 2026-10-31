@@ -616,12 +616,6 @@ final class PanelController {
                         self.focusResults()
                         return true
                     }
-                    // ⌘Delete deletes the selected clip while the search field is
-                    // empty; with text in it, it keeps editing the text.
-                    if isEditing, !isComposing, isCommandOnly, keyCode == 51 || keyCode == 117,
-                       self.appState?.searchState.searchText.isEmpty ?? false {
-                        return self.deleteSelectedClip()
-                    }
                     return false
                 }
 
@@ -629,7 +623,7 @@ final class PanelController {
                 if modifiers == .command, keyCode == 6 { // ⌘Z
                     return self.appState?.undoDeletion() ?? false
                 }
-                if modifiers == .command, keyCode == 51 || keyCode == 117 { // ⌘Delete, ⌘Forward Delete
+                if modifiers.isEmpty, keyCode == 51 || keyCode == 117 { // Delete, Forward Delete
                     return self.deleteSelectedClip()
                 }
                 if modifiers == .command, keyCode == 14 { // ⌘E
