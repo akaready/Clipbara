@@ -149,6 +149,55 @@ final class AppState {
         }
     }
 
+    // MARK: - Several clips (multi-selection)
+
+    /// The multi-selected clips in on-screen order; empty unless 2 or more are selected.
+    var selectedClips: [ClipboardItem] {
+        guard searchState.hasMultiSelection else { return [] }
+        return searchState.selectedIndices.sorted().compactMap {
+            currentFilteredItems.indices.contains($0) ? currentFilteredItems[$0] : nil
+        }
+    }
+
+    /// Return and click-free paste for a multi-selection.
+    func paste(_ items: [ClipboardItem]) {
+        clipQueue.stop()
+        clipboardMonitor.skipNextChange()
+        pasteService.pasteMany(items: items)
+        if DirectPaste.isReady {
+            hidePanel(then: { _ = DirectPaste.sendPasteShortcut() })
+        } else {
+            hidePanel()
+        }
+    }
+
+    /// ⌘C for a multi-selection: onto the clipboard, panel stays open.
+    func copy(_ items: [ClipboardItem]) {
+        clipQueue.stop()
+        clipboardMonitor.skipNextChange()
+        pasteService.writeMany(items: items)
+        showToast(String(localized: "Copied \(items.count) clips"))
+    }
+
+    func deleteClips(_ items: [ClipboardItem]) {
+        guard let context = modelContainer?.mainContext else { return }
+        hoveredClipID = nil
+        clipUndo.deleteClips(items, in: context)
+        showToast(String(localized: "Deleted. Press \u{2318}Z to undo."), systemImage: "trash")
+    }
+
+    func removeFromPinboard(_ entries: [PinboardEntry]) {
+        guard let context = modelContainer?.mainContext else { return }
+        clipUndo.removeEntries(entries, in: context)
+        showToast(String(localized: "Removed from pinboard. Press \u{2318}Z to undo."), systemImage: "pin.slash")
+    }
+
+    /// Drags every multi-selected clip at once. SwiftUI's `onDrag` carries one
+    /// item, so this starts an AppKit drag from the panel.
+    func beginMultiDrag(_ items: [ClipboardItem]) {
+        panelController.beginMultiDrag(items)
+    }
+
     // MARK: - Deleting with undo (#45)
 
     func deleteClip(_ item: ClipboardItem) {

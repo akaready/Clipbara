@@ -88,7 +88,7 @@ struct PinboardGridView: View {
 
         ClipboardCardView(
             item: item,
-            isSelected: appState.searchState.selectedIndex == index,
+            isSelected: appState.searchState.isSelected(index),
             searchText: "",
             cardWidth: cardWidth,
             cardHeight: cardHeight,
@@ -96,10 +96,17 @@ struct PinboardGridView: View {
             enableDrag: false,
             showsManagementMenu: false,
             onSelect: { _ in
-                appState.searchState.selectedIndex = index
+                appState.searchState.select(index)
             },
             onPaste: { selected in
                 appState.paste(selected)
+            },
+            onModifiedSelect: { extendsRange in
+                if extendsRange {
+                    appState.searchState.extend(to: index)
+                } else {
+                    appState.searchState.toggle(index)
+                }
             },
             onRemoveFromPinboard: {
                 removeEntry(entry)
@@ -161,7 +168,7 @@ struct PinboardGridView: View {
         change()
         syncNavigationItems(orderedEntries.compactMap(\.clipboardItem))
         if !orderedEntries.isEmpty {
-            appState.searchState.selectedIndex = min(removedIndex, orderedEntries.count - 1)
+            appState.searchState.select(min(removedIndex, orderedEntries.count - 1))
         }
     }
 }
