@@ -77,6 +77,7 @@ struct ClipbaraApp: App {
 
     init() {
         let context = sharedModelContainer.mainContext
+        ExcludedApp.seedPasswordManagersOnce(in: context)
         appState.start(modelContext: context, modelContainer: sharedModelContainer)
 
         #if APPSTORE
