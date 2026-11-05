@@ -970,7 +970,7 @@ final class PanelController {
         guard let view = panel?.contentView, let event = NSApp.currentEvent else { return }
         let origin = view.convert(event.locationInWindow, from: nil)
         let icon = NSImage(systemSymbolName: "doc.on.doc.fill", accessibilityDescription: nil) ?? NSImage()
-        let dragItems = PasteService.pasteboardItems(for: items, forDrag: true).enumerated().map { index, writer in
+        let dragItems = PasteService.pasteboardItems(for: items).enumerated().map { index, writer in
             let dragItem = NSDraggingItem(pasteboardWriter: writer)
             let offset = CGFloat(index) * 4
             dragItem.setDraggingFrame(NSRect(x: origin.x - 20 + offset, y: origin.y - 20 - offset, width: 40, height: 40), contents: icon)

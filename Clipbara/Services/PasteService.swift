@@ -163,7 +163,7 @@ struct PasteService {
 
     // MARK: - Several clips at once
 
-    /// Writes the clips as one pasteboard change; see `pasteboardItems(for:forDrag:)`.
+    /// Writes the clips as one pasteboard change; see `pasteboardItems(for:)`.
     func writeMany(items: [ClipboardItem]) {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
@@ -202,9 +202,10 @@ struct PasteService {
 
     /// All text becomes one string joined with newlines. Otherwise each clip is
     /// its own pasteboard item (files as file URLs, images as images) and the
-    /// first one also carries the joined text. A drag also gets images as temp
-    /// files, which is what Finder takes.
-    static func pasteboardItems(for items: [ClipboardItem], forDrag: Bool = false) -> [NSPasteboardItem] {
+    /// first one also carries the joined text. Images also go out as temp files:
+    /// most apps paste only the first raw image of a multi-item pasteboard but
+    /// take every file URL, as with a Finder copy (and Finder needs files to drop).
+    static func pasteboardItems(for items: [ClipboardItem]) -> [NSPasteboardItem] {
         let joined = items.filter(carriesText).compactMap(\.textContent).joined(separator: "\n")
         if items.allSatisfy(carriesText) {
             let item = NSPasteboardItem()
@@ -222,7 +223,7 @@ struct PasteService {
             case .image:
                 if let tiff = NSImage(data: clip.rawData)?.tiffRepresentation,
                    let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) {
-                    if forDrag, let url = writeTempPNG(png, sourceApp: clip.sourceAppName) {
+                    if let url = writeTempPNG(png, sourceApp: clip.sourceAppName) {
                         item.setString(url.absoluteString, forType: .fileURL)
                     }
                     item.setData(png, forType: .png)
@@ -277,8 +278,14 @@ struct PasteService {
             .trimmingCharacters(in: .whitespaces)
         let appName = (safeName?.isEmpty ?? true) ? "Clipbara" : safeName!
         let timestamp = filenameDateFormatter.string(from: Date())
-        let filename = "\(appName) \(timestamp).png" as String
-        let url = URL(fileURLWithPath: tempDir + filename)
+        // Several images in one paste share the timestamp; number them so none
+        // overwrites another.
+        var url = URL(fileURLWithPath: tempDir + "\(appName) \(timestamp).png")
+        var n = 2
+        while FileManager.default.fileExists(atPath: url.path) {
+            url = URL(fileURLWithPath: tempDir + "\(appName) \(timestamp) \(n).png")
+            n += 1
+        }
         do {
             try data.write(to: url)
             return url
