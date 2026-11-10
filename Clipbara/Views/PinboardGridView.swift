@@ -148,7 +148,6 @@ struct PinboardGridView: View {
             withAnimation(.cardReflow) { orderedEntries = current }
         }
         syncNavigationItems(current.compactMap(\.clipboardItem))
-        appState.panelController.resizeToContentItemCount(current.count)
     }
 
     private func syncNavigationItems(_ items: [ClipboardItem]) {

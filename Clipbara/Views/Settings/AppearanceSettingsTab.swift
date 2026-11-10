@@ -37,53 +37,58 @@ struct AppearanceSettingsTab: View {
                 applyTheme(newValue)
             }
 
-            Picker("Panel Width", selection: $fullWidth) {
-                Text("Fit content").tag(false)
-                Text("Full width").tag(true)
+            Picker(selection: $cardStyle) {
+                Text("Classic").tag(CardStyle.classic)
+                Text("Colorful").tag(CardStyle.colorful)
+            } label: {
+                Text("Card Style")
+                Text("Colorful tints each card by its content or source app.")
             }
             .pickerStyle(.segmented)
 
-            Picker("Card Size", selection: $cardScale) {
+            Picker(selection: $panelBackground) {
+                Text("Solid").tag(PanelBackground.solid)
+                Text("Glass").tag(PanelBackground.glass)
+            } label: {
+                Text("Panel Background")
+                Text("Glass lets the desktop show through the panel.")
+            }
+            .pickerStyle(.segmented)
+
+            Picker(selection: $fullWidth) {
+                Text("Standard").tag(false)
+                Text("Full width").tag(true)
+            } label: {
+                Text("Panel Width")
+                Text("Full width spans the whole screen.")
+            }
+            .pickerStyle(.segmented)
+
+            Picker(selection: $cardScale) {
                 Text("Small").tag(0.85)
                 Text("Medium").tag(1.0)
                 Text("Large").tag(1.25)
                 Text("Extra large").tag(1.5)
+            } label: {
+                Text("Card Size")
+                Text("Scales the cards and the panel height.")
             }
             .pickerStyle(.segmented)
 
-            Picker("Card Style", selection: $cardStyle) {
-                Text("Classic").tag(CardStyle.classic)
-                Text("Colorful").tag(CardStyle.colorful)
+            Toggle(isOn: $fitImageCards) {
+                Text("Fill image cards")
+                Text("Images fill the whole card instead of fitting inside it.")
             }
-            .pickerStyle(.segmented)
 
-            Picker("Panel Background", selection: $panelBackground) {
-                Text("Solid").tag(PanelBackground.solid)
-                Text("Glass").tag(PanelBackground.glass)
-            }
-            .pickerStyle(.segmented)
-
-            Toggle("Fill image cards", isOn: $fitImageCards)
-
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Animate Panel")
-                    Group {
-                        if reducesMotion {
-                            Text("Off while Reduce Motion is on in System Settings > Accessibility > Display.")
-                        } else {
-                            Text("Slide the history panel in and out. When off, it appears and closes at once.")
-                        }
-                    }
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+            Toggle(isOn: $animatesPanel) {
+                Text("Animate Panel")
+                if reducesMotion {
+                    Text("Off while Reduce Motion is on in System Settings > Accessibility > Display.")
+                } else {
+                    Text("Slide the history panel in and out. When off, it appears and closes at once.")
                 }
-                Spacer()
-                Toggle("", isOn: $animatesPanel)
-                    .labelsHidden()
-                    .disabled(reducesMotion)
             }
+            .disabled(reducesMotion)
             .onReceive(NSWorkspace.shared.notificationCenter.publisher(
                 for: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification
             )) { _ in
@@ -91,7 +96,6 @@ struct AppearanceSettingsTab: View {
             }
         }
         .formStyle(.grouped)
-        .padding()
         .onAppear {
             applyTheme(appTheme)
         }

@@ -5,6 +5,9 @@ import Sparkle
 
 @MainActor
 final class CheckForUpdatesViewModel: ObservableObject {
+    /// Patched fork: Sparkle never starts, so the "Check for Updates…" items stay hidden.
+    nonisolated static let isEnabled = false
+
     let updaterController: SPUStandardUpdaterController
 
     @Published var canCheckForUpdates = false
